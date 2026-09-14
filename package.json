@@ -60,7 +60,7 @@
     "autoprefixer": "10.4.22",
     "eslint": "9.39.1",
     "eslint-config-next": "15.5.25",
-    "jsdom": "27.2.0",
+    "jsdom": "30.0.1",
     "postcss": "8.5.26",
     "prettier": "3.6.2",
     "prisma": "6.12.0",
