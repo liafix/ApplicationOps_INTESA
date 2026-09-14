@@ -1,0 +1,1174 @@
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/app/page.tsx /mnt/data/applicationops-candidate-demo-pass12/app/page.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/app/page.tsx	2026-09-03 09:54:11.396301549 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/app/page.tsx	2026-09-03 10:04:14.077898378 +0000
+@@ -11,6 +11,7 @@
+ import { DiagnosticCorrelation } from "@/components/diagnostic-correlation";
+ import { RemediationDecision } from "@/components/remediation-decision";
+ import { RollbackRecovery } from "@/components/rollback-recovery";
++import { RecoveryValidation } from "@/components/recovery-validation";
+ import {
+   GuidedActiveReleaseValue,
+   GuidedAuditTrail,
+@@ -20,8 +21,7 @@
+   GuidedIncidentStatusPill,
+   GuidedResolutionState,
+   GuidedServiceHealthValue,
+-  GuidedStageCopy,
+-  GuidedValidationChecks
++  GuidedStageCopy
+ } from "@/components/guided-status";
+ import { CANDIDATE_DISCLAIMER, SCENARIO } from "@/lib/data/synthetic-scenario";
+ 
+@@ -230,17 +230,12 @@
+ 
+         <ProgressiveGate requiredStep={4}>
+         <section id="validation" className="scroll-mt-20 border-t border-slate-900 py-10">
+-          <SectionHeading eyebrow="Recovery validation" title="Remediation is not the same as resolution." description="All four canonical recovery checks remain pending after rollback. Their server-derived execution is intentionally deferred to PASS 12." />
+-          <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+-              <GuidedValidationChecks />
+-            </div>
+-            <aside className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Gate status</p>
+-              <p className="mt-2 text-3xl font-semibold text-white"><GuidedGateMetric /></p>
+-              <p className="mt-2 text-xs leading-5 text-slate-400">Resolve must stay blocked until every required validation condition is backed by recovery evidence.</p>
+-            </aside>
+-          </div>
++          <SectionHeading
++            eyebrow="Recovery validation"
++            title="Prove recovery with four persisted checks before allowing closure."
++            description="The server derives every check from persisted post-rollback evidence. Evidence readiness and authoritative validation remain separate until the explicit validation command succeeds."
++          />
++          <RecoveryValidation />
+         </section>
+         </ProgressiveGate>
+ 
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/components/guided-controller.tsx /mnt/data/applicationops-candidate-demo-pass12/components/guided-controller.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/components/guided-controller.tsx	2026-09-03 09:51:14.298082241 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/components/guided-controller.tsx	2026-09-03 10:04:34.666942892 +0000
+@@ -10,38 +10,45 @@
+   const decisionRecorded = step === 3 && incident?.status === "REMEDIATION_SELECTED" && incident.selectedRemediation === "ROLLBACK_RELEASE";
+   const rollbackComplete = incident?.status === "READY_FOR_VALIDATION";
+   const rollbackExecuting = incident?.status === "ROLLING_BACK";
++  const validationComplete = incident?.status === "VALIDATED";
+ 
+   const title = completed
+     ? "Incident resolved with the validation gate satisfied."
+-    : rollbackComplete
+-      ? "Controlled rollback completed and the recovery state is persisted."
+-      : rollbackExecuting
+-        ? "Controlled rollback is executing."
+-        : decisionRecorded
+-          ? "Remediation decision recorded. Execute the rollback as a separate controlled action."
+-          : definition?.title;
++    : validationComplete
++      ? "Recovery validation passed. All four required checks are persisted."
++      : rollbackComplete
++        ? "Recovery evidence is persisted and ready for explicit validation."
++        : rollbackExecuting
++          ? "Controlled rollback is executing."
++          : decisionRecorded
++            ? "Remediation decision recorded. Execute the rollback as a separate controlled action."
++            : definition?.title;
+ 
+   const description = completed
+     ? "Reset the synthetic scenario to replay the walkthrough."
+-    : rollbackComplete
+-      ? "Review the before/after recovery evidence. Validation remains intentionally blocked until PASS 12."
+-      : rollbackExecuting
+-        ? "The persisted release and application state are being changed atomically."
+-        : decisionRecorded
+-          ? "The guarded backend will restore the known-good synthetic release and write recovery evidence in one transaction."
+-          : definition?.description;
++    : validationComplete
++      ? "The incident is VALIDATED, not resolved. Resolution remains a separate explicit next-stage action."
++      : rollbackComplete
++        ? "Run the four server-derived checks against the persisted post-rollback evidence before allowing closure."
++        : rollbackExecuting
++          ? "The persisted release and application state are being changed atomically."
++          : decisionRecorded
++            ? "The guarded backend will restore the known-good synthetic release and write recovery evidence in one transaction."
++            : definition?.description;
+ 
+   const actionLabel = busy
+     ? "WORKING…"
+     : completed
+       ? "RESET DEMO ↻"
+-      : rollbackComplete
+-        ? "ROLLBACK COMPLETE"
+-        : rollbackExecuting
+-          ? "ROLLBACK IN PROGRESS"
+-          : decisionRecorded
+-            ? "EXECUTE CONTROLLED ROLLBACK"
+-            : definition?.actionLabel;
++      : validationComplete
++        ? "VALIDATION COMPLETE"
++        : rollbackComplete
++          ? "RUN RECOVERY VALIDATION"
++          : rollbackExecuting
++            ? "ROLLBACK IN PROGRESS"
++            : decisionRecorded
++              ? "EXECUTE CONTROLLED ROLLBACK"
++              : definition?.actionLabel;
+ 
+   return (
+     <aside
+@@ -66,7 +73,7 @@
+         <button
+           type="button"
+           onClick={completed ? () => void resetDemo() : () => void runPrimaryAction()}
+-          disabled={busy || hydrating || rollbackComplete || rollbackExecuting}
++          disabled={busy || hydrating || rollbackExecuting || validationComplete}
+           className="shrink-0 rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold tracking-[0.01em] text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+         >
+           {actionLabel}
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/components/guided-status.tsx /mnt/data/applicationops-candidate-demo-pass12/components/guided-status.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/components/guided-status.tsx	2026-09-03 08:27:15.736055186 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/components/guided-status.tsx	2026-09-03 10:05:58.257173904 +0000
+@@ -62,7 +62,9 @@
+         <p className="mt-3 text-sm leading-6 text-slate-300">
+           {status === "RESOLVED"
+             ? "The persisted incident has passed validation and is now resolved. Detailed business handoff copy remains a later presentation pass."
+-            : "Recovery validation is complete. The final guided action can now resolve the persisted incident."}
++            : status === "VALIDATED"
++              ? "Recovery validation is complete. Incident resolution remains a separate explicit action and has not been executed."
++              : "Recovery validation must complete before incident resolution becomes available."}
+         </p>
+       </div>
+       <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5">
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/components/guided-workflow-provider.tsx /mnt/data/applicationops-candidate-demo-pass12/components/guided-workflow-provider.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/components/guided-workflow-provider.tsx	2026-09-03 09:54:11.395830730 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/components/guided-workflow-provider.tsx	2026-09-03 10:04:32.744677409 +0000
+@@ -233,16 +233,17 @@
+           await apiRequest(`/api/incidents/${SCENARIO.incidentId}/rollback`, { method: "POST" });
+           break;
+         case 4:
+-          // PASS 11 stops after persisted rollback + recovery. Validation is deliberately held for PASS 12.
++          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
++          break;
++        case 5:
++          // PASS 12 deliberately stops after persisted 4/4 recovery validation.
++          // Resolution remains a separate explicit workflow stage.
+           scrollToGuidedTarget("validation");
+           return;
+-        case 5:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
+-          break;
+       }
+ 
+       await refresh();
+-      scrollToGuidedTarget(nextGuidedTargetAfterAction(step));
++      scrollToGuidedTarget(step === 4 ? "validation" : nextGuidedTargetAfterAction(step));
+     } catch (caught) {
+       try {
+         await refresh();
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/components/recovery-validation.tsx /mnt/data/applicationops-candidate-demo-pass12/components/recovery-validation.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/components/recovery-validation.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/components/recovery-validation.tsx	2026-09-03 10:04:01.155183510 +0000
+@@ -0,0 +1,148 @@
++"use client";
++
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { REQUIRED_VALIDATION_DEFINITIONS } from "@/lib/domain/validation";
++import { recoveryValidationView } from "@/lib/ui/recovery-validation";
++import { useGuidedWorkflow } from "./guided-workflow-provider";
++
++function EvidenceStatus({ ok }: { ok: boolean }) {
++  return (
++    <span
++      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
++        ok
++          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
++          : "border-rose-400/30 bg-rose-400/10 text-rose-200"
++      }`}
++    >
++      {ok ? "Evidence ready" : "Evidence gap"}
++    </span>
++  );
++}
++
++function PersistedStatus({ status }: { status: "PENDING" | "PASS" | "FAIL" }) {
++  const tone =
++    status === "PASS"
++      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
++      : status === "FAIL"
++        ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
++        : "border-slate-700 bg-slate-900 text-slate-300";
++  return (
++    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${tone}`}>
++      {status}
++    </span>
++  );
++}
++
++export function RecoveryValidation() {
++  const { incident, releases, requests, transactions, logs, audit, validation } = useGuidedWorkflow();
++  const view = recoveryValidationView({
++    incident,
++    releases,
++    requests,
++    transactions,
++    logs,
++    audit,
++    validation
++  });
++
++  const evidenceByKey = {
++    "stable-release": view.evidence.stableReleaseRestored,
++    "error-rate": view.evidence.errorRateBelowThreshold,
++    "synthetic-transaction": view.evidence.syntheticTransactionSucceeded,
++    "timeout-errors": view.evidence.noNewTimeoutErrors
++  } as const;
++
++  const detailByKey = {
++    "stable-release": `v${SCENARIO.previousRelease.version} active + STABLE, v${SCENARIO.currentRelease.version} ROLLED_BACK, service HEALTHY`,
++    "error-rate": `${incident?.application.syntheticErrorRate ?? "—"}% < ${SCENARIO.validationErrorRateThresholdPct}% synthetic threshold`,
++    "synthetic-transaction": `${SCENARIO.recoveryRequestId} → HTTP 200 and ${SCENARIO.recoveryTransactionId} → SUCCEEDED on v${SCENARIO.previousRelease.version}`,
++    "timeout-errors": `${view.evidence.timeoutErrorsAfterRollback} new ${SCENARIO.failureCode} ERROR logs after rollback completion`
++  } as const;
++
++  const title =
++    view.mode === "READY"
++      ? "Recovery evidence is ready for a server-derived 4/4 validation run."
++      : view.mode === "VALIDATED"
++        ? "Validation passed. All four required checks are persisted."
++        : view.mode === "BLOCKED"
++          ? "Validation is blocked by incomplete persisted recovery evidence."
++          : view.mode === "INCONSISTENT"
++            ? "Validation state is inconsistent with the persisted evidence."
++            : "Validation remains locked until controlled rollback completes.";
++
++  const tone =
++    view.mode === "VALIDATED"
++      ? "border-emerald-400/25 bg-emerald-400/[0.045]"
++      : view.mode === "READY"
++        ? "border-sky-400/25 bg-sky-400/[0.045]"
++        : view.mode === "BLOCKED" || view.mode === "INCONSISTENT"
++          ? "border-rose-400/25 bg-rose-400/[0.04]"
++          : "border-slate-800 bg-slate-950/60";
++
++  return (
++    <div className="space-y-4">
++      <section className={`rounded-2xl border p-5 ${tone}`}>
++        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
++          <div>
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Recovery validation gate</p>
++            <h3 className="mt-2 text-lg font-semibold text-white">{title}</h3>
++          </div>
++          <span className="w-fit rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">
++            {view.mode}
++          </span>
++        </div>
++        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">
++          The browser does not mark these checks as passed. The validation command re-reads persisted release, service, request, transaction and log evidence on the server, then atomically persists the four canonical check results together with the VALIDATED incident transition and validation audit events.
++        </p>
++      </section>
++
++      <div className="grid gap-4 lg:grid-cols-[1fr_310px]">
++        <div className="space-y-3">
++          {REQUIRED_VALIDATION_DEFINITIONS.map((definition) => {
++            const persisted = validation.find((check) => check.key === definition.id);
++            const evidenceReady = evidenceByKey[definition.id];
++            return (
++              <article key={definition.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
++                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
++                  <div>
++                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{definition.id}</p>
++                    <h4 className="mt-1 text-sm font-semibold text-slate-100">{definition.label}</h4>
++                    <p className="mt-2 text-xs leading-5 text-slate-400">{detailByKey[definition.id]}</p>
++                  </div>
++                  <div className="flex shrink-0 flex-wrap gap-2">
++                    <EvidenceStatus ok={evidenceReady} />
++                    <PersistedStatus status={persisted?.status ?? "PENDING"} />
++                  </div>
++                </div>
++              </article>
++            );
++          })}
++        </div>
++
++        <aside className="space-y-4">
++          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Evidence readiness</p>
++            <p className="mt-2 text-3xl font-semibold text-white">{view.evidencePassCount} / 4</p>
++            <p className="mt-2 text-xs leading-5 text-slate-400">Observed directly from persisted post-rollback state. This is not yet the authoritative validation result.</p>
++          </div>
++          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Persisted validation</p>
++            <p className={`mt-2 text-3xl font-semibold ${view.persistedPassCount === 4 ? "text-emerald-200" : "text-white"}`}>
++              {view.persistedPassCount} / 4
++            </p>
++            <p className="mt-2 text-xs leading-5 text-slate-400">
++              {view.mode === "VALIDATED"
++                ? "VALIDATION_STARTED and VALIDATION_PASSED are both present in the audit trail."
++                : "The four checks remain PENDING until the explicit validation command succeeds."}
++            </p>
++          </div>
++          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-5">
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">Closure boundary</p>
++            <p className="mt-2 text-sm font-semibold text-slate-100">4/4 validated ≠ incident resolved.</p>
++            <p className="mt-2 text-xs leading-5 text-slate-400">A successful validation only unlocks the next workflow stage. Incident resolution remains a separate explicit action.</p>
++          </div>
++        </aside>
++      </div>
++    </div>
++  );
++}
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/components/rollback-recovery.tsx /mnt/data/applicationops-candidate-demo-pass12/components/rollback-recovery.tsx
+--- /mnt/data/applicationops-candidate-demo-pass11/components/rollback-recovery.tsx	2026-09-03 09:51:14.296772390 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/components/rollback-recovery.tsx	2026-09-03 10:04:35.985437194 +0000
+@@ -61,7 +61,7 @@
+           </span>
+         </div>
+         <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">
+-          The rollback action is a separate persisted command. It restores the known-good synthetic release, updates service state and writes recovery evidence atomically. This section does not run the PASS 12 validation gate.
++          The rollback action is a separate persisted command. It restores the known-good synthetic release, updates service state and writes recovery evidence atomically. Formal recovery validation remains a separate explicit action after this persisted recovery state is complete.
+         </p>
+       </div>
+ 
+@@ -121,7 +121,7 @@
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">Boundary</p>
+           <p className="mt-2 text-sm font-semibold text-slate-100">Recovery observed ≠ incident validated.</p>
+           <p className="mt-2 text-xs leading-5 text-slate-400">
+-            Even after the service returns to the synthetic healthy state, the four canonical validation checks remain a separate next-stage gate. PASS 11 stops here.
++            Even after the service returns to the synthetic healthy state, the four canonical validation checks remain a separate gate and must be evaluated from persisted recovery evidence before closure.
+           </p>
+         </aside>
+       </div>
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/lib/evidence/recovery-validation.ts /mnt/data/applicationops-candidate-demo-pass12/lib/evidence/recovery-validation.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/lib/evidence/recovery-validation.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/lib/evidence/recovery-validation.ts	2026-09-03 10:02:04.344154303 +0000
+@@ -0,0 +1,152 @@
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import type { IncidentStatus, ReleaseStatus } from "@/lib/domain/types";
++
++export type TimeValue = Date | string | number;
++
++export interface RecoveryValidationInput {
++  incident: {
++    status: IncidentStatus;
++    recoveredRelease: string | null;
++    application: {
++      serviceHealth: string;
++      activeReleaseVersion: string;
++      syntheticErrorRate: number;
++    };
++  } | null;
++  releases: {
++    previous: {
++      version: string;
++      status: ReleaseStatus;
++    };
++    current: {
++      version: string;
++      status: ReleaseStatus;
++    };
++    activeReleaseVersion: string;
++  } | null;
++  requests: Array<{
++    requestId: string;
++    responseStatus: number;
++    releaseVersion: string;
++    failureCode: string | null;
++    createdAt: TimeValue;
++  }>;
++  transactions: Array<{
++    id: string;
++    requestId: string;
++    status: "FAILED" | "SUCCEEDED";
++    applicationVersion: string;
++    failureCode: string | null;
++    createdAt: TimeValue;
++  }>;
++  logs: Array<{
++    timestamp: TimeValue;
++    level: "INFO" | "WARN" | "ERROR";
++    requestId: string | null;
++    message: string;
++  }>;
++  audit: Array<{
++    type: string;
++    timestamp: TimeValue;
++  }>;
++}
++
++export interface RecoveryValidationEvidence {
++  rollbackCompletedAt: number | null;
++  stableReleaseRestored: boolean;
++  errorRateBelowThreshold: boolean;
++  syntheticTransactionSucceeded: boolean;
++  noNewTimeoutErrors: boolean;
++  recoveryRequestSucceeded: boolean;
++  recoveryTransactionSucceeded: boolean;
++  timeoutErrorsAfterRollback: number;
++}
++
++function timeMs(value: TimeValue): number {
++  if (value instanceof Date) return value.getTime();
++  if (typeof value === "number") return value;
++  const parsed = Date.parse(value);
++  return Number.isFinite(parsed) ? parsed : Number.NaN;
++}
++
++export function deriveRecoveryValidationEvidence(input: RecoveryValidationInput): RecoveryValidationEvidence {
++  const incident = input.incident;
++  const releases = input.releases;
++  const rollbackCompleted = input.audit
++    .filter((event) => event.type === "ROLLBACK_COMPLETED")
++    .map((event) => timeMs(event.timestamp))
++    .filter(Number.isFinite)
++    .sort((a, b) => b - a)[0];
++  const rollbackCompletedAt = rollbackCompleted ?? null;
++
++  const recoveryRequest = input.requests.find(
++    (request) =>
++      request.requestId === SCENARIO.recoveryRequestId &&
++      (rollbackCompletedAt === null || timeMs(request.createdAt) >= rollbackCompletedAt)
++  );
++  const recoveryTransaction = input.transactions.find(
++    (transaction) =>
++      transaction.id === SCENARIO.recoveryTransactionId &&
++      transaction.requestId === SCENARIO.recoveryRequestId &&
++      (rollbackCompletedAt === null || timeMs(transaction.createdAt) >= rollbackCompletedAt)
++  );
++
++  const recoveryRequestSucceeded =
++    rollbackCompletedAt !== null &&
++    recoveryRequest?.responseStatus === 200 &&
++    recoveryRequest.releaseVersion === SCENARIO.previousRelease.version &&
++    recoveryRequest.failureCode === null;
++
++  const recoveryTransactionSucceeded =
++    rollbackCompletedAt !== null &&
++    recoveryTransaction?.status === "SUCCEEDED" &&
++    recoveryTransaction.applicationVersion === SCENARIO.previousRelease.version &&
++    recoveryTransaction.failureCode === null;
++
++  const timeoutErrorsAfterRollback =
++    rollbackCompletedAt === null
++      ? 0
++      : input.logs.filter(
++          (log) =>
++            timeMs(log.timestamp) > rollbackCompletedAt &&
++            log.level === "ERROR" &&
++            log.message.includes(SCENARIO.failureCode)
++        ).length;
++
++  const stableReleaseRestored =
++    rollbackCompletedAt !== null &&
++    incident?.recoveredRelease === SCENARIO.previousRelease.version &&
++    incident.application.activeReleaseVersion === SCENARIO.previousRelease.version &&
++    incident.application.serviceHealth === "HEALTHY" &&
++    releases?.activeReleaseVersion === SCENARIO.previousRelease.version &&
++    releases.previous.version === SCENARIO.previousRelease.version &&
++    releases.previous.status === "STABLE" &&
++    releases.current.version === SCENARIO.currentRelease.version &&
++    releases.current.status === "ROLLED_BACK";
++
++  const errorRateBelowThreshold =
++    rollbackCompletedAt !== null &&
++    Number.isFinite(incident?.application.syntheticErrorRate) &&
++    (incident?.application.syntheticErrorRate ?? Number.POSITIVE_INFINITY) <
++      SCENARIO.validationErrorRateThresholdPct;
++
++  return {
++    rollbackCompletedAt,
++    stableReleaseRestored,
++    errorRateBelowThreshold,
++    syntheticTransactionSucceeded: recoveryRequestSucceeded && recoveryTransactionSucceeded,
++    noNewTimeoutErrors: rollbackCompletedAt !== null && timeoutErrorsAfterRollback === 0,
++    recoveryRequestSucceeded,
++    recoveryTransactionSucceeded,
++    timeoutErrorsAfterRollback
++  };
++}
++
++export function recoveryEvidencePassCount(evidence: RecoveryValidationEvidence): number {
++  return [
++    evidence.stableReleaseRestored,
++    evidence.errorRateBelowThreshold,
++    evidence.syntheticTransactionSucceeded,
++    evidence.noNewTimeoutErrors
++  ].filter(Boolean).length;
++}
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/lib/services/applicationops-service.ts /mnt/data/applicationops-candidate-demo-pass12/lib/services/applicationops-service.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/lib/services/applicationops-service.ts	2026-09-02 13:28:32.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/lib/services/applicationops-service.ts	2026-09-03 10:02:38.654398490 +0000
+@@ -13,6 +13,7 @@
+   startInvestigation,
+   validateRecovery,
+   type IncidentStatus,
++  type ReleaseStatus,
+   type RemediationAction,
+   type ValidationCheck,
+   type ValidationCheckId
+@@ -23,6 +24,7 @@
+   validationChecksFromEvidence
+ } from "@/lib/api/incident-evidence";
+ import { ApiError, PersistenceConflictError } from "@/lib/api/errors";
++import { deriveRecoveryValidationEvidence } from "@/lib/evidence/recovery-validation";
+ 
+ const ACTOR = "Candidate walkthrough";
+ 
+@@ -491,36 +493,62 @@
+       throw new ApiError(409, "ROLLBACK_NOT_COMPLETED", "Recovery validation requires a completed rollback.");
+     }
+ 
+-    const stableReleaseRestored =
+-      context.incident.application.activeReleaseVersion === context.previousRelease.version &&
+-      context.currentRelease.status === "ROLLED_BACK" &&
+-      context.previousRelease.status === "STABLE";
+-    const errorRateBelowThreshold =
+-      context.incident.application.syntheticErrorRate < SCENARIO.validationErrorRateThresholdPct;
+-    const syntheticTransactionSucceeded = context.incident.transactions.some(
+-      (transaction) =>
+-        transaction.status === "SUCCEEDED" &&
+-        transaction.applicationVersion === context.previousRelease.version &&
+-        transaction.createdAt.getTime() >= rollbackCompleted.timestamp.getTime()
+-    );
+-    const noNewTimeoutErrors = !context.incident.logs.some(
+-      (log) =>
+-        log.timestamp.getTime() > rollbackCompleted.timestamp.getTime() &&
+-        log.level === "ERROR" &&
+-        log.message.includes(SCENARIO.failureCode)
+-    );
+-
+-    const checks = validationChecksFromEvidence({
+-      stableReleaseRestored,
+-      errorRateBelowThreshold,
+-      syntheticTransactionSucceeded,
+-      noNewTimeoutErrors
++    const recoveryEvidence = deriveRecoveryValidationEvidence({
++      incident: {
++        status: context.incident.status as IncidentStatus,
++        recoveredRelease: context.incident.recoveredRelease,
++        application: {
++          serviceHealth: context.incident.application.serviceHealth,
++          activeReleaseVersion: context.incident.application.activeReleaseVersion,
++          syntheticErrorRate: context.incident.application.syntheticErrorRate
++        }
++      },
++      releases: {
++        previous: {
++          version: context.previousRelease.version,
++          status: context.previousRelease.status as ReleaseStatus
++        },
++        current: {
++          version: context.currentRelease.version,
++          status: context.currentRelease.status as ReleaseStatus
++        },
++        activeReleaseVersion: context.incident.application.activeReleaseVersion
++      },
++      requests: context.incident.requests.map((request) => ({
++        requestId: request.requestId,
++        responseStatus: request.responseStatus,
++        releaseVersion: request.releaseVersion,
++        failureCode: request.failureCode,
++        createdAt: request.createdAt
++      })),
++      transactions: context.incident.transactions.map((transaction) => ({
++        id: transaction.id,
++        requestId: transaction.requestId,
++        status: transaction.status as "FAILED" | "SUCCEEDED",
++        applicationVersion: transaction.applicationVersion,
++        failureCode: transaction.failureCode,
++        createdAt: transaction.createdAt
++      })),
++      logs: context.incident.logs.map((log) => ({
++        timestamp: log.timestamp,
++        level: log.level as "INFO" | "WARN" | "ERROR",
++        requestId: log.requestId,
++        message: log.message
++      })),
++      audit: context.incident.auditEvents.map((event) => ({
++        type: event.type,
++        timestamp: event.timestamp
++      }))
+     });
++
++    const checks = validationChecksFromEvidence(recoveryEvidence);
+     const next = validateRecovery(context.incident.status as IncidentStatus, checks);
+     const validationStartedAt = new Date();
+ 
+     await appendAudit(tx, id, "VALIDATION_STARTED", {
+-      thresholdPct: SCENARIO.validationErrorRateThresholdPct
++      thresholdPct: SCENARIO.validationErrorRateThresholdPct,
++      recoveryRequestId: SCENARIO.recoveryRequestId,
++      recoveryTransactionId: SCENARIO.recoveryTransactionId
+     }, validationStartedAt);
+ 
+     for (const check of checks) {
+@@ -539,9 +567,16 @@
+       context.incident.status as IncidentStatus,
+       next
+     );
+-    await appendAudit(tx, id, "VALIDATION_PASSED", { passed: 4, required: 4 }, new Date(validationStartedAt.getTime() + 1));
++    await appendAudit(tx, id, "VALIDATION_PASSED", {
++      passed: 4,
++      required: 4,
++      stableReleaseRestored: recoveryEvidence.stableReleaseRestored,
++      errorRateBelowThreshold: recoveryEvidence.errorRateBelowThreshold,
++      syntheticTransactionSucceeded: recoveryEvidence.syntheticTransactionSucceeded,
++      noNewTimeoutErrors: recoveryEvidence.noNewTimeoutErrors
++    }, new Date(validationStartedAt.getTime() + 1));
+ 
+-    return { id, status: next, checks };
++    return { id, status: next, checks, evidence: recoveryEvidence };
+   });
+ }
+ 
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/lib/ui/recovery-validation.ts /mnt/data/applicationops-candidate-demo-pass12/lib/ui/recovery-validation.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/lib/ui/recovery-validation.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/lib/ui/recovery-validation.ts	2026-09-03 10:03:30.289147241 +0000
+@@ -0,0 +1,106 @@
++import { REQUIRED_VALIDATION_DEFINITIONS } from "@/lib/domain/validation";
++import type { IncidentStatus, ValidationStatus } from "@/lib/domain/types";
++import {
++  deriveRecoveryValidationEvidence,
++  recoveryEvidencePassCount,
++  type RecoveryValidationEvidence,
++  type RecoveryValidationInput
++} from "@/lib/evidence/recovery-validation";
++
++export type RecoveryValidationMode = "LOCKED" | "READY" | "BLOCKED" | "VALIDATED" | "INCONSISTENT";
++
++export interface PersistedValidationCheck {
++  id: string;
++  key: string;
++  label: string;
++  required: boolean;
++  status: ValidationStatus;
++}
++
++export interface RecoveryValidationViewInput extends RecoveryValidationInput {
++  validation: PersistedValidationCheck[];
++}
++
++export interface RecoveryValidationView {
++  mode: RecoveryValidationMode;
++  evidence: RecoveryValidationEvidence;
++  evidencePassCount: number;
++  persistedPassCount: number;
++  canonicalSchemaComplete: boolean;
++  allCanonicalPending: boolean;
++  allCanonicalPassed: boolean;
++  validationStarted: boolean;
++  validationPassedAudit: boolean;
++}
++
++const POST_VALIDATION_STATES: readonly IncidentStatus[] = ["VALIDATED", "RESOLVED"];
++
++function canonicalValidationState(validation: PersistedValidationCheck[]) {
++  const expected = new Set<string>(REQUIRED_VALIDATION_DEFINITIONS.map((definition) => definition.id));
++  const canonical = validation.filter((check) => expected.has(check.key));
++  const keys = canonical.map((check) => check.key);
++  const unique = new Set(keys);
++
++  const canonicalSchemaComplete =
++    validation.length === REQUIRED_VALIDATION_DEFINITIONS.length &&
++    canonical.length === REQUIRED_VALIDATION_DEFINITIONS.length &&
++    unique.size === REQUIRED_VALIDATION_DEFINITIONS.length &&
++    REQUIRED_VALIDATION_DEFINITIONS.every((definition) =>
++      canonical.some(
++        (check) =>
++          check.key === definition.id &&
++          check.required === true &&
++          check.label === definition.label
++      )
++    );
++
++  return {
++    canonical,
++    canonicalSchemaComplete,
++    allCanonicalPending:
++      canonicalSchemaComplete && canonical.every((check) => check.status === "PENDING"),
++    allCanonicalPassed:
++      canonicalSchemaComplete && canonical.every((check) => check.status === "PASS"),
++    persistedPassCount: canonical.filter((check) => check.required && check.status === "PASS").length
++  };
++}
++
++export function recoveryValidationView(input: RecoveryValidationViewInput): RecoveryValidationView {
++  const evidence = deriveRecoveryValidationEvidence(input);
++  const evidencePassCount = recoveryEvidencePassCount(evidence);
++  const persisted = canonicalValidationState(input.validation);
++  const validationStarted = input.audit.some((event) => event.type === "VALIDATION_STARTED");
++  const validationPassedAudit = input.audit.some((event) => event.type === "VALIDATION_PASSED");
++  const status = input.incident?.status;
++
++  let mode: RecoveryValidationMode = "LOCKED";
++
++  if (status === "READY_FOR_VALIDATION") {
++    if (!persisted.canonicalSchemaComplete || !persisted.allCanonicalPending || validationPassedAudit) {
++      mode = "INCONSISTENT";
++    } else {
++      mode = evidencePassCount === 4 ? "READY" : "BLOCKED";
++    }
++  } else if (status && POST_VALIDATION_STATES.includes(status)) {
++    mode =
++      persisted.canonicalSchemaComplete &&
++      persisted.allCanonicalPassed &&
++      evidencePassCount === 4 &&
++      validationStarted &&
++      validationPassedAudit
++        ? "VALIDATED"
++        : "INCONSISTENT";
++  }
++
++  return {
++    mode,
++    evidence,
++    evidencePassCount,
++    persistedPassCount: persisted.persistedPassCount,
++    canonicalSchemaComplete: persisted.canonicalSchemaComplete,
++    allCanonicalPending: persisted.allCanonicalPending,
++    allCanonicalPassed: persisted.allCanonicalPassed,
++    validationStarted,
++    validationPassedAudit
++  };
++}
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/package.json /mnt/data/applicationops-candidate-demo-pass12/package.json
+--- /mnt/data/applicationops-candidate-demo-pass11/package.json	2026-09-03 09:51:14.299377810 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/package.json	2026-09-03 10:10:09.889128664 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "applicationops-candidate-demo",
+-  "version": "0.11.0",
++  "version": "0.12.0",
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+@@ -27,7 +27,8 @@
+     "pass8:gate": "python3 scripts/pass8_release_evidence_gate.py",
+     "pass9:gate": "python3 scripts/pass9_diagnostic_correlation_gate.py",
+     "pass10:gate": "python3 scripts/pass10_remediation_decision_gate.py",
+-    "pass11:gate": "python3 scripts/pass11_rollback_recovery_gate.py"
++    "pass11:gate": "python3 scripts/pass11_rollback_recovery_gate.py",
++    "pass12:gate": "python3 scripts/pass12_recovery_validation_gate.py"
+   },
+   "dependencies": {
+     "@prisma/client": "6.19.0",
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/scripts/pass12_recovery_validation_gate.py /mnt/data/applicationops-candidate-demo-pass12/scripts/pass12_recovery_validation_gate.py
+--- /mnt/data/applicationops-candidate-demo-pass11/scripts/pass12_recovery_validation_gate.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/scripts/pass12_recovery_validation_gate.py	2026-09-03 10:09:48.333188742 +0000
+@@ -0,0 +1,78 @@
++from pathlib import Path
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++provider = (ROOT / "components/guided-workflow-provider.tsx").read_text()
++controller = (ROOT / "components/guided-controller.tsx").read_text()
++page = (ROOT / "app/page.tsx").read_text()
++component = (ROOT / "components/recovery-validation.tsx").read_text()
++ui_helper = (ROOT / "lib/ui/recovery-validation.ts").read_text()
++evidence = (ROOT / "lib/evidence/recovery-validation.ts").read_text()
++service = (ROOT / "lib/services/applicationops-service.ts").read_text()
++integration = (ROOT / "tests/integration/applicationops.db.test.ts").read_text()
++unit_evidence = (ROOT / "tests/unit/recovery-validation-evidence.test.ts").read_text()
++unit_ui = (ROOT / "tests/unit/recovery-validation-ui.test.ts").read_text()
++
++checks=[]
++def check(name, ok, detail): checks.append((name,bool(ok),detail))
++
++for path in [
++    "components/recovery-validation.tsx",
++    "lib/ui/recovery-validation.ts",
++    "lib/evidence/recovery-validation.ts",
++    "tests/unit/recovery-validation-evidence.test.ts",
++    "tests/unit/recovery-validation-ui.test.ts",
++    "scripts/pass12_validation_smoke.ts",
++]:
++    check(f"artifact::{path}", (ROOT/path).exists(), f"PASS 12 artifact {path} exists.")
++
++check("page_renders_validation", "<RecoveryValidation />" in page and 'id="validation"' in page, "Recovery validation section renders the PASS 12 component.")
++check("provider_calls_validation", "/validation/run`" in provider and 'method: "POST"' in provider, "Step 4 executes the existing guarded validation endpoint.")
++check("provider_stops_before_resolution", "/resolve" not in provider, "Guided provider does not execute resolution in PASS 12.")
++check("controller_validation_action", "RUN RECOVERY VALIDATION" in controller, "Controller exposes explicit validation execution after recovery.")
++check("controller_holds_after_validation", "VALIDATION COMPLETE" in controller and "validationComplete" in controller, "Controller stops after VALIDATED rather than resolving automatically.")
++check("validation_complete_disabled", "rollbackExecuting || validationComplete" in controller, "Validated state disables further guided action in PASS 12.")
++
++for marker in [
++    "stableReleaseRestored",
++    "errorRateBelowThreshold",
++    "syntheticTransactionSucceeded",
++    "noNewTimeoutErrors",
++]:
++    check(f"evidence::{marker}", marker in evidence and marker in service, f"Server validation derives {marker} from persisted recovery state.")
++
++check("exact_recovery_request", "SCENARIO.recoveryRequestId" in evidence and "responseStatus === 200" in evidence, "Synthetic transaction check requires the exact persisted recovery request and HTTP success.")
++check("exact_recovery_transaction", "SCENARIO.recoveryTransactionId" in evidence and 'status === "SUCCEEDED"' in evidence, "Synthetic transaction check requires the exact persisted recovery transaction.")
++check("restored_release_guard", 'status === "ROLLED_BACK"' in evidence and 'status === "STABLE"' in evidence and 'serviceHealth === "HEALTHY"' in evidence, "Stable-release validation checks persisted release and service recovery invariants.")
++check("strict_error_threshold", "<\n      SCENARIO.validationErrorRateThresholdPct" in evidence or "SCENARIO.validationErrorRateThresholdPct" in evidence, "Error-rate check uses the configured synthetic validation threshold.")
++check("timeout_after_rollback", "timeMs(log.timestamp) > rollbackCompletedAt" in evidence and "SCENARIO.failureCode" in evidence, "Timeout check is scoped after the persisted ROLLBACK_COMPLETED boundary.")
++
++check("server_authoritative_copy", "The browser does not mark these checks as passed" in component, "UI explicitly distinguishes evidence readiness from authoritative server validation.")
++check("four_definitions", "REQUIRED_VALIDATION_DEFINITIONS.map" in component, "UI renders the exact canonical four validation definitions.")
++check("evidence_vs_persisted", "Evidence readiness" in component and "Persisted validation" in component, "UI separates observed evidence readiness from persisted PASS state.")
++check("closure_boundary", "4/4 validated ≠ incident resolved" in component, "PASS 12 preserves validation-vs-resolution boundary.")
++
++for mode in ['"LOCKED"', '"READY"', '"BLOCKED"', '"VALIDATED"', '"INCONSISTENT"']:
++    check(f"mode::{mode}", mode in ui_helper, f"Validation view includes fail-closed {mode} mode.")
++check("schema_exact", "validation.length === REQUIRED_VALIDATION_DEFINITIONS.length" in ui_helper and "unique.size === REQUIRED_VALIDATION_DEFINITIONS.length" in ui_helper, "UI validation view fails closed on missing/duplicate canonical checks.")
++check("validation_audits_required", "VALIDATION_STARTED" in ui_helper and "VALIDATION_PASSED" in ui_helper, "VALIDATED display requires persisted validation audit evidence.")
++
++check("atomic_backend", "prisma.$transaction" in service and '"VALIDATION_STARTED"' in service and '"VALIDATION_PASSED"' in service, "Validation remains an atomic DB transaction with matching audit events.")
++check("guarded_domain_validation", "validateRecovery" in service and "validationChecksFromEvidence" in service, "Backend still delegates 4/4 enforcement to guarded domain validation.")
++check("persisted_checks_update", "tx.validationCheck.updateMany" in service and "compareAndSetIncidentStatus" in service, "Check persistence and incident transition remain guarded inside the transaction.")
++check("tamper_negative_path", "tampered recovery request" in integration and 'responseStatus: 500' in integration and '"VALIDATION_REQUIRED"' in integration, "DB integration source covers persisted recovery evidence tampering.")
++check("unit_negative_paths", "timeout error appears after rollback completion" in unit_evidence and "missing validation audit evidence" in unit_ui, "Unit source covers evidence and validation-state fail-closed paths.")
++
++# PASS 13 freeze: existing backend resolve route/service may remain from earlier backend passes,
++# but PASS 12 must not add or invoke a resolution/handoff implementation in guided UI.
++check("pass13_no_new_component", not (ROOT / "components/resolution-handoff.tsx").exists(), "No dedicated PASS 13 resolution/handoff component introduced.")
++check("pass13_no_new_helper", not (ROOT / "lib/ui/resolution-handoff.ts").exists(), "No dedicated PASS 13 resolution/handoff helper introduced.")
++check("pass13_no_guided_resolve_call", "/resolve" not in provider, "Guided workflow cannot execute the PASS 13 resolution command.")
++
++failed=[x for x in checks if not x[1]]
++for name,ok,detail in checks:
++    print(("PASS" if ok else "FAIL"), name, "-", detail)
++print(f"\nchecks={len(checks)} passed={len(checks)-len(failed)} failed={len(failed)}")
++if failed:
++    sys.exit(1)
++print("PASS12_RECOVERY_VALIDATION_GATE_PASS")
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/scripts/pass12_validation_smoke.ts /mnt/data/applicationops-candidate-demo-pass12/scripts/pass12_validation_smoke.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/scripts/pass12_validation_smoke.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/scripts/pass12_validation_smoke.ts	2026-09-03 10:07:38.185125985 +0000
+@@ -0,0 +1,96 @@
++import { SCENARIO } from "../lib/data/synthetic-scenario";
++import { createPendingValidationChecks } from "../lib/domain/validation";
++import { deriveRecoveryValidationEvidence, recoveryEvidencePassCount } from "../lib/evidence/recovery-validation";
++import { recoveryValidationView } from "../lib/ui/recovery-validation";
++
++function assert(condition: unknown, message: string) {
++  if (!condition) throw new Error(message);
++  console.log(`PASS ${message}`);
++}
++
++const rollbackAt = "2026-09-03T09:00:00.000Z";
++const recoveryAt = "2026-09-03T09:00:01.000Z";
++
++function baseInput(status: "READY_FOR_VALIDATION" | "VALIDATED" = "READY_FOR_VALIDATION"): import("../lib/ui/recovery-validation").RecoveryValidationViewInput {
++  return {
++    incident: {
++      status,
++      recoveredRelease: SCENARIO.previousRelease.version,
++      application: {
++        serviceHealth: "HEALTHY",
++        activeReleaseVersion: SCENARIO.previousRelease.version,
++        syntheticErrorRate: SCENARIO.recoveredErrorRatePct
++      }
++    },
++    releases: {
++      previous: { version: SCENARIO.previousRelease.version, status: "STABLE" as const },
++      current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" as const },
++      activeReleaseVersion: SCENARIO.previousRelease.version
++    },
++    requests: [{
++      requestId: SCENARIO.recoveryRequestId,
++      responseStatus: 200,
++      releaseVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: recoveryAt
++    }],
++    transactions: [{
++      id: SCENARIO.recoveryTransactionId,
++      requestId: SCENARIO.recoveryRequestId,
++      status: "SUCCEEDED" as const,
++      applicationVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: recoveryAt
++    }],
++    logs: [{
++      timestamp: recoveryAt,
++      level: "INFO" as const,
++      requestId: SCENARIO.recoveryRequestId,
++      message: `Synthetic recovery transaction ${SCENARIO.recoveryTransactionId} completed successfully.`
++    }],
++    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }],
++    validation: createPendingValidationChecks().map((check) => ({
++      id: `validation-${check.id}`,
++      key: check.id,
++      label: check.label,
++      required: check.required,
++      status: check.status
++    }))
++  };
++}
++
++const ready = baseInput();
++const evidence = deriveRecoveryValidationEvidence(ready);
++assert(recoveryEvidencePassCount(evidence) === 4, "4/4 recovery evidence conditions derive from persisted state");
++const readyView = recoveryValidationView(ready);
++assert(readyView.mode === "READY", "READY_FOR_VALIDATION + complete evidence + pending checks exposes READY gate");
++assert(readyView.persistedPassCount === 0, "evidence readiness does not manufacture persisted PASS statuses");
++
++const validated = baseInput("VALIDATED");
++validated.validation = validated.validation.map((check) => ({ ...check, status: "PASS" as const }));
++validated.audit.push(
++  { type: "VALIDATION_STARTED", timestamp: "2026-09-03T09:00:02.000Z" },
++  { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.001Z" }
++);
++const validatedView = recoveryValidationView(validated);
++assert(validatedView.mode === "VALIDATED", "VALIDATED requires 4/4 persisted PASS plus validation audit evidence");
++assert(validatedView.persistedPassCount === 4, "persisted validation gate reports 4/4 PASS");
++
++const tampered = baseInput();
++tampered.requests[0].responseStatus = 500;
++assert(recoveryValidationView(tampered).mode === "BLOCKED", "tampered recovery request blocks validation readiness");
++
++const timeoutRegression = baseInput();
++timeoutRegression.logs.push({
++  timestamp: "2026-09-03T09:00:03.000Z",
++  level: "ERROR",
++  requestId: "req_after_rollback",
++  message: `${SCENARIO.failureCode} after rollback`
++});
++assert(recoveryValidationView(timeoutRegression).mode === "BLOCKED", "new timeout ERROR after rollback blocks validation readiness");
++
++const missingAudit = baseInput("VALIDATED");
++missingAudit.validation = missingAudit.validation.map((check) => ({ ...check, status: "PASS" as const }));
++assert(recoveryValidationView(missingAudit).mode === "INCONSISTENT", "validated state without validation audits fails closed");
++
++console.log("PASS12_RECOVERY_VALIDATION_SMOKE_PASS");
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/tests/integration/applicationops.db.test.ts /mnt/data/applicationops-candidate-demo-pass12/tests/integration/applicationops.db.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/tests/integration/applicationops.db.test.ts	2026-09-02 13:32:54.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/tests/integration/applicationops.db.test.ts	2026-09-03 10:05:23.931225686 +0000
+@@ -175,6 +175,31 @@
+     expect(persisted?.auditEvents.some((event) => event.type === "INCIDENT_RESOLVED")).toBe(false);
+   });
+ 
++
++  it("derives validation from persisted recovery evidence and refuses a tampered recovery request", async () => {
++    await progressToReadyForValidation();
++
++    await prisma.apiRequest.update({
++      where: { id: "api-request-recovery-1" },
++      data: { responseStatus: 500, failureCode: SCENARIO.failureCode }
++    });
++
++    let thrown: unknown;
++    try {
++      await runIncidentValidation(SCENARIO.incidentId);
++    } catch (error) {
++      thrown = error;
++    }
++    expect(thrown).toBeInstanceOf(DomainError);
++    assertErrorCode(thrown, "VALIDATION_REQUIRED");
++
++    const persisted = await readSyntheticScenario(prisma);
++    expect(persisted?.status).toBe("READY_FOR_VALIDATION");
++    expect(persisted?.validationChecks.every((check) => check.status === "PENDING")).toBe(true);
++    expect(persisted?.auditEvents.some((event) => event.type === "VALIDATION_STARTED")).toBe(false);
++    expect(persisted?.auditEvents.some((event) => event.type === "VALIDATION_PASSED")).toBe(false);
++  });
++
+   it("rolls back the entire rollback command when persisted release evidence conflicts mid-transaction", async () => {
+     await progressToConfirmedRegression();
+     await selectIncidentRemediation(SCENARIO.incidentId, "ROLLBACK_RELEASE");
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/tests/unit/recovery-validation-evidence.test.ts /mnt/data/applicationops-candidate-demo-pass12/tests/unit/recovery-validation-evidence.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/tests/unit/recovery-validation-evidence.test.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/tests/unit/recovery-validation-evidence.test.ts	2026-09-03 10:10:54.168074131 +0000
+@@ -0,0 +1,106 @@
++import { describe, expect, it } from "vitest";
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { deriveRecoveryValidationEvidence, type RecoveryValidationInput } from "@/lib/evidence/recovery-validation";
++
++function completeInput(): RecoveryValidationInput {
++  const rollbackAt = new Date("2026-09-03T09:00:00.000Z");
++  const after = new Date(rollbackAt.getTime() + 1000);
++  return {
++    incident: {
++      status: "READY_FOR_VALIDATION" as const,
++      recoveredRelease: SCENARIO.previousRelease.version,
++      application: {
++        serviceHealth: "HEALTHY",
++        activeReleaseVersion: SCENARIO.previousRelease.version,
++        syntheticErrorRate: SCENARIO.recoveredErrorRatePct
++      }
++    },
++    releases: {
++      previous: { version: SCENARIO.previousRelease.version, status: "STABLE" as const },
++      current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" as const },
++      activeReleaseVersion: SCENARIO.previousRelease.version
++    },
++    requests: [
++      {
++        requestId: SCENARIO.recoveryRequestId,
++        responseStatus: 200,
++        releaseVersion: SCENARIO.previousRelease.version,
++        failureCode: null,
++        createdAt: after
++      }
++    ],
++    transactions: [
++      {
++        id: SCENARIO.recoveryTransactionId,
++        requestId: SCENARIO.recoveryRequestId,
++        status: "SUCCEEDED" as const,
++        applicationVersion: SCENARIO.previousRelease.version,
++        failureCode: null,
++        createdAt: after
++      }
++    ],
++    logs: [
++      {
++        timestamp: after,
++        level: "INFO" as const,
++        requestId: SCENARIO.recoveryRequestId,
++        message: `Synthetic recovery transaction ${SCENARIO.recoveryTransactionId} completed successfully.`
++      }
++    ],
++    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }]
++  };
++}
++
++describe("persisted recovery validation evidence", () => {
++  it("derives all four canonical conditions from the complete persisted recovery state", () => {
++    const evidence = deriveRecoveryValidationEvidence(completeInput());
++    expect(evidence.stableReleaseRestored).toBe(true);
++    expect(evidence.errorRateBelowThreshold).toBe(true);
++    expect(evidence.syntheticTransactionSucceeded).toBe(true);
++    expect(evidence.noNewTimeoutErrors).toBe(true);
++  });
++
++  it("requires the exact persisted recovery request and transaction on the restored release", () => {
++    const input = completeInput();
++    input.requests[0].responseStatus = 500;
++    expect(deriveRecoveryValidationEvidence(input).syntheticTransactionSucceeded).toBe(false);
++
++    const second = completeInput();
++    second.transactions[0].applicationVersion = SCENARIO.currentRelease.version;
++    expect(deriveRecoveryValidationEvidence(second).syntheticTransactionSucceeded).toBe(false);
++  });
++
++  it("treats the error-rate threshold as strict and does not manufacture a pass", () => {
++    const input = completeInput();
++    input.incident!.application.syntheticErrorRate = SCENARIO.validationErrorRateThresholdPct;
++    expect(deriveRecoveryValidationEvidence(input).errorRateBelowThreshold).toBe(false);
++  });
++
++  it("fails the stable-release check if any persisted release/application recovery invariant is broken", () => {
++    const input = completeInput();
++    input.incident!.application.serviceHealth = "DEGRADED";
++    expect(deriveRecoveryValidationEvidence(input).stableReleaseRestored).toBe(false);
++  });
++
++  it("fails no-new-timeout-errors when a timeout error appears after rollback completion", () => {
++    const input = completeInput();
++    input.logs.push({
++      timestamp: new Date("2026-09-03T09:00:02.000Z"),
++      level: "ERROR",
++      requestId: "req_after_rollback",
++      message: `${SCENARIO.failureCode} · HTTP 504`
++    });
++    const evidence = deriveRecoveryValidationEvidence(input);
++    expect(evidence.timeoutErrorsAfterRollback).toBe(1);
++    expect(evidence.noNewTimeoutErrors).toBe(false);
++  });
++
++  it("does not allow post-rollback evidence without a persisted ROLLBACK_COMPLETED audit boundary", () => {
++    const input = completeInput();
++    input.audit = [];
++    const evidence = deriveRecoveryValidationEvidence(input);
++    expect(evidence.stableReleaseRestored).toBe(false);
++    expect(evidence.syntheticTransactionSucceeded).toBe(false);
++    expect(evidence.noNewTimeoutErrors).toBe(false);
++  });
++});
+diff -ruN '--exclude=PASS_*' '--exclude=README.md' '--exclude=API_CONTRACT.md' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass11/tests/unit/recovery-validation-ui.test.ts /mnt/data/applicationops-candidate-demo-pass12/tests/unit/recovery-validation-ui.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass11/tests/unit/recovery-validation-ui.test.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass12/tests/unit/recovery-validation-ui.test.ts	2026-09-03 10:05:01.858750836 +0000
+@@ -0,0 +1,93 @@
++import { describe, expect, it } from "vitest";
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { createPendingValidationChecks } from "@/lib/domain/validation";
++import { recoveryValidationView } from "@/lib/ui/recovery-validation";
++
++function baseInput(status: "READY_FOR_VALIDATION" | "VALIDATED" = "READY_FOR_VALIDATION") {
++  const rollbackAt = "2026-09-03T09:00:00.000Z";
++  const after = "2026-09-03T09:00:01.000Z";
++  return {
++    incident: {
++      status,
++      recoveredRelease: SCENARIO.previousRelease.version,
++      application: {
++        serviceHealth: "HEALTHY",
++        activeReleaseVersion: SCENARIO.previousRelease.version,
++        syntheticErrorRate: SCENARIO.recoveredErrorRatePct
++      }
++    },
++    releases: {
++      previous: { version: SCENARIO.previousRelease.version, status: "STABLE" as const },
++      current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" as const },
++      activeReleaseVersion: SCENARIO.previousRelease.version
++    },
++    requests: [{
++      requestId: SCENARIO.recoveryRequestId,
++      responseStatus: 200,
++      releaseVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: after
++    }],
++    transactions: [{
++      id: SCENARIO.recoveryTransactionId,
++      requestId: SCENARIO.recoveryRequestId,
++      status: "SUCCEEDED" as const,
++      applicationVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: after
++    }],
++    logs: [{
++      timestamp: after,
++      level: "INFO" as const,
++      requestId: SCENARIO.recoveryRequestId,
++      message: "Recovery succeeded"
++    }],
++    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }],
++    validation: createPendingValidationChecks().map((check) => ({
++      id: `validation-${check.id}`,
++      key: check.id,
++      label: check.label,
++      required: check.required,
++      status: check.status
++    }))
++  };
++}
++
++describe("recovery validation view", () => {
++  it("is READY when 4/4 persisted evidence conditions exist but checks are still pending", () => {
++    const view = recoveryValidationView(baseInput());
++    expect(view.mode).toBe("READY");
++    expect(view.evidencePassCount).toBe(4);
++    expect(view.persistedPassCount).toBe(0);
++  });
++
++  it("is BLOCKED when the recovery evidence is incomplete", () => {
++    const input = baseInput();
++    input.requests = [];
++    expect(recoveryValidationView(input).mode).toBe("BLOCKED");
++  });
++
++  it("is VALIDATED only when exact canonical checks are PASS and both validation audits exist", () => {
++    const input = baseInput("VALIDATED");
++    input.validation = input.validation.map((check) => ({ ...check, status: "PASS" as const }));
++    input.audit.push(
++      { type: "VALIDATION_STARTED", timestamp: "2026-09-03T09:00:02.000Z" },
++      { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.001Z" }
++    );
++    const view = recoveryValidationView(input);
++    expect(view.mode).toBe("VALIDATED");
++    expect(view.persistedPassCount).toBe(4);
++  });
++
++  it("fails closed when a validated incident is missing validation audit evidence", () => {
++    const input = baseInput("VALIDATED");
++    input.validation = input.validation.map((check) => ({ ...check, status: "PASS" as const }));
++    expect(recoveryValidationView(input).mode).toBe("INCONSISTENT");
++  });
++
++  it("fails closed when a canonical validation check is missing", () => {
++    const input = baseInput();
++    input.validation = input.validation.slice(0, 3);
++    expect(recoveryValidationView(input).mode).toBe("INCONSISTENT");
++  });
++});

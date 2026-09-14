@@ -1,0 +1,36 @@
+ApplicationOps PASS 15 repository gate after source reconciliation
+checked_at_utc=2026-09-06T08:29:31Z
+FAIL package-lock committed
+PASS Node 22 engine locked
+PASS npm 10 engine locked
+PASS packageManager pinned
+PASS Next patched backport
+PASS React patched line
+PASS Prisma client hardened
+PASS Prisma CLI hardened
+PASS Vitest hardened
+PASS PostCSS dev dependency hardened
+PASS PostCSS override hardened
+PASS Sharp override hardened
+PASS full audit is a hard gate
+PASS quality CI script exists
+PASS database CI script exists
+PASS CI uses npm ci
+PASS CI runs lint
+PASS CI runs typecheck
+PASS CI runs unit tests
+PASS CI runs production build
+PASS CI runs security audit
+PASS CI runs PostgreSQL integration
+PASS CI applies migrations
+PASS CI pins PostgreSQL 18
+PASS CI permissions read-only
+PASS Dependabot npm configured
+PASS env files ignored
+PASS node_modules ignored
+PASS Next build output ignored
+PASS next-env lint ignored
+PASS PASS 13 closure migration committed
+checks=31
+passed=30
+failed=1

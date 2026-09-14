@@ -1,0 +1,1170 @@
+diff -ruN applicationops-candidate-demo-pass12/API_CONTRACT.md applicationops-candidate-demo-pass13/API_CONTRACT.md
+--- applicationops-candidate-demo-pass12/API_CONTRACT.md	2026-09-03 10:13:46.527881746 +0000
++++ applicationops-candidate-demo-pass13/API_CONTRACT.md	2026-09-03 10:22:40.842443332 +0000
+@@ -105,3 +105,19 @@
+ If the evidence does not satisfy all required checks, `validateRecovery()` rejects the state transition and the transaction does not manufacture validation success. When 4/4 pass, the same transaction records `VALIDATION_STARTED`, persists the four check statuses, compare-and-sets the incident to `VALIDATED`, records `VALIDATION_PASSED`, and commits the result together.
+ 
+ PASS 12 guided UI invokes this validation command but intentionally does not invoke `/resolve`. `VALIDATED` and `RESOLVED` remain separate domain states.
++
++## PASS 13 resolution + business handoff contract
++
++`POST /api/incidents/APP-2047/resolve` remains a separate explicit command after `VALIDATED`. It does not accept a target status or closure copy from the client.
++
++Inside one Prisma/PostgreSQL transaction the server:
++
++1. re-reads the persisted incident, releases, requests, synthetic transactions, logs, validation checks and audit evidence;
++2. requires the exact confirmed root cause `RELEASE_TIMEOUT_REGRESSION`, selected `ROLLBACK_RELEASE`, restored v2.7.4 state, 4/4 recovery evidence, 4/4 persisted validation and `VALIDATION_PASSED` audit evidence;
++3. derives deterministic technical and business-facing closure summaries from that persisted evidence;
++4. compare-and-sets `VALIDATED → RESOLVED` while persisting both closure summaries on the incident;
++5. appends `RESOLUTION_HANDOFF_CREATED` and then `INCIDENT_RESOLVED` in the same transaction.
++
++If post-validation recovery evidence has drifted, the command fails closed with `409 RESOLUTION_EVIDENCE_INCOMPLETE`; no summary, resolution status or closure audit is partially persisted.
++
++The incident read response now also exposes nullable `closureTechnicalSummary` and `closureBusinessSummary`. They remain `null` before successful explicit resolution.
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_BACKEND_REGRESSION_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_BACKEND_REGRESSION_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_BACKEND_REGRESSION_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_BACKEND_REGRESSION_OUTPUT.txt	2026-09-03 10:20:16.831643651 +0000
+@@ -0,0 +1,9 @@
++PASS4_RELATIONAL_BACKEND_GATE_PASS
++tests=7 passed=7 failed=0
++PASS golden_path
++PASS rollback_before_evidence
++PASS unsupported_remediation
++PASS validation_before_rollback
++PASS resolve_before_validation
++PASS rollback_transaction_atomicity
++PASS deterministic_reset
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_GATE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_GATE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_GATE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_GATE_OUTPUT.txt	2026-09-03 10:23:51.033344880 +0000
+@@ -0,0 +1,27 @@
++PASS artifact::components/resolution-handoff.tsx - components/resolution-handoff.tsx exists
++PASS artifact::lib/evidence/resolution-handoff.ts - lib/evidence/resolution-handoff.ts exists
++PASS artifact::lib/ui/resolution-handoff.ts - lib/ui/resolution-handoff.ts exists
++PASS artifact::tests/unit/resolution-handoff.test.ts - tests/unit/resolution-handoff.test.ts exists
++PASS artifact::tests/unit/resolution-handoff-ui.test.ts - tests/unit/resolution-handoff-ui.test.ts exists
++PASS artifact::prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql - prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql exists
++PASS provider_resolve_call - Step 5 calls guarded resolve endpoint.
++PASS controller_resolve_action - Controller exposes explicit resolution action.
++PASS controller_not_disabled_after_validation - Validated state is actionable rather than disabled.
++PASS page_handoff - Resolution section uses dedicated PASS 13 component.
++PASS no_preview_of_unpersisted_summary - Browser does not preview unpersisted closure copy before resolution.
++PASS server_derives_summaries - Server derives closure summaries from persisted evidence.
++PASS atomic_resolution - Summary persistence and closure audits occur in transaction.
++PASS persisted_fields - Prisma persists both closure summaries.
++PASS migration_fields - PASS 13 migration adds closure fields.
++PASS validation_guard - Handoff requires 4/4 persisted validation plus audit evidence.
++PASS recovery_guard - Handoff fails closed when post-validation recovery evidence drifts.
++PASS synthetic_boundary - Business handoff retains synthetic-data boundary.
++PASS ui_modes - UI closure state is fail-closed.
++PASS resolved_requires_summaries - RESOLVED display requires evidence-matching summaries and both closure audits.
++PASS integration_sequence - DB golden path expects handoff audit before resolution.
++PASS integration_persistence - DB tests assert persisted summaries.
++PASS integration_drift_negative - DB source covers post-validation evidence drift.
++PASS pass14_freeze - No PASS 14 presentation implementation introduced.
++
++checks=24 passed=24 failed=0
++PASS13_RESOLUTION_HANDOFF_GATE_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt	2026-09-03 10:20:15.899652285 +0000
+@@ -0,0 +1 @@
++PASS13_RESOLUTION_HELPER_TYPESCRIPT_COMPILE_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_REPORT.md applicationops-candidate-demo-pass13/PASS_13_REPORT.md
+--- applicationops-candidate-demo-pass12/PASS_13_REPORT.md	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_REPORT.md	2026-09-03 10:24:13.898081879 +0000
+@@ -0,0 +1,138 @@
++# ApplicationOps — PASS 13 Resolution + Business Handoff Report
++
++## Scope
++
++PASS 13 implements the final explicit incident-closure stage only:
++
++`VALIDATED → RESOLVED`
++
++It does not implement PASS 14 Presentation Mode.
++
++## Implemented
++
++- guided Step 5 now executes `POST /api/incidents/APP-2047/resolve`;
++- the controller exposes `RESOLVE INCIDENT` only after persisted validation reaches `VALIDATED`;
++- two new nullable persisted incident fields:
++  - `closureTechnicalSummary`;
++  - `closureBusinessSummary`;
++- additive Prisma migration for those closure fields;
++- deterministic `deriveResolutionHandoff()` built only from persisted synthetic evidence;
++- fail-closed UI state model: `LOCKED | READY | RESOLVED | INCONSISTENT`;
++- dedicated `ResolutionHandoff` UI with technical and business-facing views;
++- atomic closure audit sequence:
++  - `RESOLUTION_HANDOFF_CREATED`;
++  - `INCIDENT_RESOLVED`;
++- reset contract clears both closure summaries.
++
++## Closure evidence requirements
++
++The server refuses final closure unless all of these remain true at resolution time:
++
++1. incident is `VALIDATED`;
++2. root cause is `RELEASE_TIMEOUT_REGRESSION`;
++3. selected remediation is `ROLLBACK_RELEASE`;
++4. affected release remains v2.8.0;
++5. recovered release remains v2.7.4;
++6. post-rollback recovery evidence still passes 4/4;
++7. the four canonical persisted validation checks still pass;
++8. `VALIDATION_PASSED` exists in the audit trail.
++
++If any invariant has drifted, the command returns `RESOLUTION_EVIDENCE_INCOMPLETE` and the transaction does not persist a partial closure.
++
++## Closure summaries
++
++### Technical summary
++
++The technical handoff includes the persisted synthetic root-cause code, affected/current release, timeout-vs-latency evidence, correlated request + transaction identifiers, controlled rollback target, service recovery state, recovery request + transaction result, and 4/4 validation outcome.
++
++### Business-facing summary
++
++The stakeholder handoff intentionally removes raw low-level diagnostics. It states that a release-level timeout regression caused elevated synthetic failures, the service was restored to the previous stable release, recovery checks passed 4/4 and the incident was closed after validation. It preserves the synthetic-data boundary.
++
++No €/% savings or claims about Intesa internal systems are introduced.
++
++## Fail-closed resolved display
++
++The UI only presents `RESOLVED` when:
++
++- persisted incident status is `RESOLVED`;
++- both persisted closure summaries exist;
++- both summaries exactly match the deterministic evidence-derived summaries;
++- `RESOLUTION_HANDOFF_CREATED` exists;
++- `INCIDENT_RESOLVED` exists;
++- underlying recovery + validation evidence still remains consistent.
++
++Otherwise the resolution surface shows `INCONSISTENT` rather than a false successful closure.
++
++## Integration-test source hardening
++
++The PostgreSQL integration source now additionally asserts:
++
++- golden-path closure summaries are persisted;
++- `RESOLUTION_HANDOFF_CREATED` occurs before `INCIDENT_RESOLVED`;
++- resolving before validation persists no closure summary/audit;
++- post-validation service-state drift blocks resolution and leaves `VALIDATED` unchanged;
++- deterministic reset clears closure fields.
++
++## Verification executed in this environment
++
++### PASS 13 source/scope gate
++
++```text
++checks=24
++passed=24
++failed=0
++PASS13_RESOLUTION_HANDOFF_GATE_PASS
++```
++
++### Executable closure-contract smoke
++
++```text
++checks=7
++passed=7
++failed=0
++PASS13_RESOLUTION_HANDOFF_SMOKE_PASS
++```
++
++### TypeScript checks
++
++```text
++PASS13_RESOLUTION_HELPER_TYPESCRIPT_COMPILE_PASS
++PASS13_UNIT_TEST_SOURCE_TYPESCRIPT_SHIM_COMPILE_PASS
++PASS13_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
++PASS13_SERVICE_TYPESCRIPT_PRISMA_SHIM_COMPILE_PASS
++```
++
++The service shim compile disables `noImplicitAny` only for generic Prisma relation values because the real generated Prisma client is unavailable in this environment; strict pure helper/UI-state compilation remains enabled.
++
++### Previous backend regression harness
++
++```text
++PASS4_RELATIONAL_BACKEND_GATE_PASS
++tests=7 passed=7 failed=0
++```
++
++### Secret scan
++
++```text
++PASS13_SECRET_PATTERN_SCAN_PASS
++```
++
++## Runtime boundary still open
++
++This pass does not claim successful execution of:
++
++- `npm ci`;
++- Prisma client generation using installed project dependencies;
++- migrations against a real PostgreSQL runtime;
++- the real Prisma/PostgreSQL integration suite;
++- full Vitest/ESLint/typecheck;
++- Next.js production build;
++- browser/mobile visual QA;
++- dependency audit.
++
++Those remain release blockers before public repository/deployment/application use.
++
++## PASS 14 freeze
++
++No Presentation Mode component, browser-only synthetic state engine or public deployment implementation was added. PASS 14 remains not started.
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt	2026-09-03 10:23:13.358141600 +0000
+@@ -0,0 +1,9 @@
++PASS validated evidence permits closure handoff
++PASS technical summary generated
++PASS business summary generated
++PASS evidence drift blocks closure
++PASS missing validation blocks closure
++PASS closure requires separate handoff audit
++PASS resolution remains explicit after validation
++checks=7 passed=7 failed=0
++PASS13_RESOLUTION_HANDOFF_SMOKE_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_SCHEMA_STATIC_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_SCHEMA_STATIC_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_SCHEMA_STATIC_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_SCHEMA_STATIC_OUTPUT.txt	2026-09-03 10:23:27.721898232 +0000
+@@ -0,0 +1 @@
++PASS13_SCHEMA_MIGRATION_STATIC_AUDIT_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_SCOPE_DIFF.txt applicationops-candidate-demo-pass13/PASS_13_SCOPE_DIFF.txt
+--- applicationops-candidate-demo-pass12/PASS_13_SCOPE_DIFF.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_SCOPE_DIFF.txt	2026-09-03 10:24:14.101206107 +0000
+@@ -0,0 +1,232 @@
++diff -ruN applicationops-candidate-demo-pass12/API_CONTRACT.md applicationops-candidate-demo-pass13/API_CONTRACT.md
++--- applicationops-candidate-demo-pass12/API_CONTRACT.md	2026-09-03 10:13:46.527881746 +0000
+++++ applicationops-candidate-demo-pass13/API_CONTRACT.md	2026-09-03 10:22:40.842443332 +0000
++@@ -105,3 +105,19 @@
++ If the evidence does not satisfy all required checks, `validateRecovery()` rejects the state transition and the transaction does not manufacture validation success. When 4/4 pass, the same transaction records `VALIDATION_STARTED`, persists the four check statuses, compare-and-sets the incident to `VALIDATED`, records `VALIDATION_PASSED`, and commits the result together.
++ 
++ PASS 12 guided UI invokes this validation command but intentionally does not invoke `/resolve`. `VALIDATED` and `RESOLVED` remain separate domain states.
+++
+++## PASS 13 resolution + business handoff contract
+++
+++`POST /api/incidents/APP-2047/resolve` remains a separate explicit command after `VALIDATED`. It does not accept a target status or closure copy from the client.
+++
+++Inside one Prisma/PostgreSQL transaction the server:
+++
+++1. re-reads the persisted incident, releases, requests, synthetic transactions, logs, validation checks and audit evidence;
+++2. requires the exact confirmed root cause `RELEASE_TIMEOUT_REGRESSION`, selected `ROLLBACK_RELEASE`, restored v2.7.4 state, 4/4 recovery evidence, 4/4 persisted validation and `VALIDATION_PASSED` audit evidence;
+++3. derives deterministic technical and business-facing closure summaries from that persisted evidence;
+++4. compare-and-sets `VALIDATED → RESOLVED` while persisting both closure summaries on the incident;
+++5. appends `RESOLUTION_HANDOFF_CREATED` and then `INCIDENT_RESOLVED` in the same transaction.
+++
+++If post-validation recovery evidence has drifted, the command fails closed with `409 RESOLUTION_EVIDENCE_INCOMPLETE`; no summary, resolution status or closure audit is partially persisted.
+++
+++The incident read response now also exposes nullable `closureTechnicalSummary` and `closureBusinessSummary`. They remain `null` before successful explicit resolution.
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_BACKEND_REGRESSION_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_BACKEND_REGRESSION_OUTPUT.txt
++--- applicationops-candidate-demo-pass12/PASS_13_BACKEND_REGRESSION_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_BACKEND_REGRESSION_OUTPUT.txt	2026-09-03 10:20:16.831643651 +0000
++@@ -0,0 +1,9 @@
+++PASS4_RELATIONAL_BACKEND_GATE_PASS
+++tests=7 passed=7 failed=0
+++PASS golden_path
+++PASS rollback_before_evidence
+++PASS unsupported_remediation
+++PASS validation_before_rollback
+++PASS resolve_before_validation
+++PASS rollback_transaction_atomicity
+++PASS deterministic_reset
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_GATE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_GATE_OUTPUT.txt
++--- applicationops-candidate-demo-pass12/PASS_13_GATE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_GATE_OUTPUT.txt	2026-09-03 10:23:51.033344880 +0000
++@@ -0,0 +1,27 @@
+++PASS artifact::components/resolution-handoff.tsx - components/resolution-handoff.tsx exists
+++PASS artifact::lib/evidence/resolution-handoff.ts - lib/evidence/resolution-handoff.ts exists
+++PASS artifact::lib/ui/resolution-handoff.ts - lib/ui/resolution-handoff.ts exists
+++PASS artifact::tests/unit/resolution-handoff.test.ts - tests/unit/resolution-handoff.test.ts exists
+++PASS artifact::tests/unit/resolution-handoff-ui.test.ts - tests/unit/resolution-handoff-ui.test.ts exists
+++PASS artifact::prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql - prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql exists
+++PASS provider_resolve_call - Step 5 calls guarded resolve endpoint.
+++PASS controller_resolve_action - Controller exposes explicit resolution action.
+++PASS controller_not_disabled_after_validation - Validated state is actionable rather than disabled.
+++PASS page_handoff - Resolution section uses dedicated PASS 13 component.
+++PASS no_preview_of_unpersisted_summary - Browser does not preview unpersisted closure copy before resolution.
+++PASS server_derives_summaries - Server derives closure summaries from persisted evidence.
+++PASS atomic_resolution - Summary persistence and closure audits occur in transaction.
+++PASS persisted_fields - Prisma persists both closure summaries.
+++PASS migration_fields - PASS 13 migration adds closure fields.
+++PASS validation_guard - Handoff requires 4/4 persisted validation plus audit evidence.
+++PASS recovery_guard - Handoff fails closed when post-validation recovery evidence drifts.
+++PASS synthetic_boundary - Business handoff retains synthetic-data boundary.
+++PASS ui_modes - UI closure state is fail-closed.
+++PASS resolved_requires_summaries - RESOLVED display requires evidence-matching summaries and both closure audits.
+++PASS integration_sequence - DB golden path expects handoff audit before resolution.
+++PASS integration_persistence - DB tests assert persisted summaries.
+++PASS integration_drift_negative - DB source covers post-validation evidence drift.
+++PASS pass14_freeze - No PASS 14 presentation implementation introduced.
+++
+++checks=24 passed=24 failed=0
+++PASS13_RESOLUTION_HANDOFF_GATE_PASS
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt
++--- applicationops-candidate-demo-pass12/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_HELPER_TS_COMPILE_OUTPUT.txt	2026-09-03 10:20:15.899652285 +0000
++@@ -0,0 +1 @@
+++PASS13_RESOLUTION_HELPER_TYPESCRIPT_COMPILE_PASS
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_REPORT.md applicationops-candidate-demo-pass13/PASS_13_REPORT.md
++--- applicationops-candidate-demo-pass12/PASS_13_REPORT.md	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_REPORT.md	2026-09-03 10:24:13.898081879 +0000
++@@ -0,0 +1,138 @@
+++# ApplicationOps — PASS 13 Resolution + Business Handoff Report
+++
+++## Scope
+++
+++PASS 13 implements the final explicit incident-closure stage only:
+++
+++`VALIDATED → RESOLVED`
+++
+++It does not implement PASS 14 Presentation Mode.
+++
+++## Implemented
+++
+++- guided Step 5 now executes `POST /api/incidents/APP-2047/resolve`;
+++- the controller exposes `RESOLVE INCIDENT` only after persisted validation reaches `VALIDATED`;
+++- two new nullable persisted incident fields:
+++  - `closureTechnicalSummary`;
+++  - `closureBusinessSummary`;
+++- additive Prisma migration for those closure fields;
+++- deterministic `deriveResolutionHandoff()` built only from persisted synthetic evidence;
+++- fail-closed UI state model: `LOCKED | READY | RESOLVED | INCONSISTENT`;
+++- dedicated `ResolutionHandoff` UI with technical and business-facing views;
+++- atomic closure audit sequence:
+++  - `RESOLUTION_HANDOFF_CREATED`;
+++  - `INCIDENT_RESOLVED`;
+++- reset contract clears both closure summaries.
+++
+++## Closure evidence requirements
+++
+++The server refuses final closure unless all of these remain true at resolution time:
+++
+++1. incident is `VALIDATED`;
+++2. root cause is `RELEASE_TIMEOUT_REGRESSION`;
+++3. selected remediation is `ROLLBACK_RELEASE`;
+++4. affected release remains v2.8.0;
+++5. recovered release remains v2.7.4;
+++6. post-rollback recovery evidence still passes 4/4;
+++7. the four canonical persisted validation checks still pass;
+++8. `VALIDATION_PASSED` exists in the audit trail.
+++
+++If any invariant has drifted, the command returns `RESOLUTION_EVIDENCE_INCOMPLETE` and the transaction does not persist a partial closure.
+++
+++## Closure summaries
+++
+++### Technical summary
+++
+++The technical handoff includes the persisted synthetic root-cause code, affected/current release, timeout-vs-latency evidence, correlated request + transaction identifiers, controlled rollback target, service recovery state, recovery request + transaction result, and 4/4 validation outcome.
+++
+++### Business-facing summary
+++
+++The stakeholder handoff intentionally removes raw low-level diagnostics. It states that a release-level timeout regression caused elevated synthetic failures, the service was restored to the previous stable release, recovery checks passed 4/4 and the incident was closed after validation. It preserves the synthetic-data boundary.
+++
+++No €/% savings or claims about Intesa internal systems are introduced.
+++
+++## Fail-closed resolved display
+++
+++The UI only presents `RESOLVED` when:
+++
+++- persisted incident status is `RESOLVED`;
+++- both persisted closure summaries exist;
+++- both summaries exactly match the deterministic evidence-derived summaries;
+++- `RESOLUTION_HANDOFF_CREATED` exists;
+++- `INCIDENT_RESOLVED` exists;
+++- underlying recovery + validation evidence still remains consistent.
+++
+++Otherwise the resolution surface shows `INCONSISTENT` rather than a false successful closure.
+++
+++## Integration-test source hardening
+++
+++The PostgreSQL integration source now additionally asserts:
+++
+++- golden-path closure summaries are persisted;
+++- `RESOLUTION_HANDOFF_CREATED` occurs before `INCIDENT_RESOLVED`;
+++- resolving before validation persists no closure summary/audit;
+++- post-validation service-state drift blocks resolution and leaves `VALIDATED` unchanged;
+++- deterministic reset clears closure fields.
+++
+++## Verification executed in this environment
+++
+++### PASS 13 source/scope gate
+++
+++```text
+++checks=24
+++passed=24
+++failed=0
+++PASS13_RESOLUTION_HANDOFF_GATE_PASS
+++```
+++
+++### Executable closure-contract smoke
+++
+++```text
+++checks=7
+++passed=7
+++failed=0
+++PASS13_RESOLUTION_HANDOFF_SMOKE_PASS
+++```
+++
+++### TypeScript checks
+++
+++```text
+++PASS13_RESOLUTION_HELPER_TYPESCRIPT_COMPILE_PASS
+++PASS13_UNIT_TEST_SOURCE_TYPESCRIPT_SHIM_COMPILE_PASS
+++PASS13_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
+++PASS13_SERVICE_TYPESCRIPT_PRISMA_SHIM_COMPILE_PASS
+++```
+++
+++The service shim compile disables `noImplicitAny` only for generic Prisma relation values because the real generated Prisma client is unavailable in this environment; strict pure helper/UI-state compilation remains enabled.
+++
+++### Previous backend regression harness
+++
+++```text
+++PASS4_RELATIONAL_BACKEND_GATE_PASS
+++tests=7 passed=7 failed=0
+++```
+++
+++### Secret scan
+++
+++```text
+++PASS13_SECRET_PATTERN_SCAN_PASS
+++```
+++
+++## Runtime boundary still open
+++
+++This pass does not claim successful execution of:
+++
+++- `npm ci`;
+++- Prisma client generation using installed project dependencies;
+++- migrations against a real PostgreSQL runtime;
+++- the real Prisma/PostgreSQL integration suite;
+++- full Vitest/ESLint/typecheck;
+++- Next.js production build;
+++- browser/mobile visual QA;
+++- dependency audit.
+++
+++Those remain release blockers before public repository/deployment/application use.
+++
+++## PASS 14 freeze
+++
+++No Presentation Mode component, browser-only synthetic state engine or public deployment implementation was added. PASS 14 remains not started.
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt
++--- applicationops-candidate-demo-pass12/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_RESOLUTION_HANDOFF_SMOKE_OUTPUT.txt	2026-09-03 10:23:13.358141600 +0000
++@@ -0,0 +1,9 @@
+++PASS validated evidence permits closure handoff
+++PASS technical summary generated
+++PASS business summary generated
+++PASS evidence drift blocks closure
+++PASS missing validation blocks closure
+++PASS closure requires separate handoff audit
+++PASS resolution remains explicit after validation
+++checks=7 passed=7 failed=0
+++PASS13_RESOLUTION_HANDOFF_SMOKE_PASS
++diff -ruN applicationops-candidate-demo-pass12/PASS_13_SCHEMA_STATIC_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_SCHEMA_STATIC_OUTPUT.txt
++--- applicationops-candidate-demo-pass12/PASS_13_SCHEMA_STATIC_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ applicationops-candidate-demo-pass13/PASS_13_SCHEMA_STATIC_OUTPUT.txt	2026-09-03 10:23:27.721898232 +0000
++@@ -0,0 +1 @@
+++PASS13_SCHEMA_MIGRATION_STATIC_AUDIT_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_SECRET_SCAN_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_SECRET_SCAN_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_SECRET_SCAN_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_SECRET_SCAN_OUTPUT.txt	2026-09-03 10:20:17.987632941 +0000
+@@ -0,0 +1 @@
++PASS13_SECRET_PATTERN_SCAN_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_SERVICE_TS_COMPILE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_SERVICE_TS_COMPILE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_SERVICE_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_SERVICE_TS_COMPILE_OUTPUT.txt	2026-09-03 10:21:46.510868298 +0000
+@@ -0,0 +1 @@
++PASS13_SERVICE_TYPESCRIPT_PRISMA_SHIM_COMPILE_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_TEST_TS_COMPILE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_TEST_TS_COMPILE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_TEST_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_TEST_TS_COMPILE_OUTPUT.txt	2026-09-03 10:20:30.759516454 +0000
+@@ -0,0 +1 @@
++PASS13_UNIT_TEST_SOURCE_TYPESCRIPT_SHIM_COMPILE_PASS
+diff -ruN applicationops-candidate-demo-pass12/PASS_13_UI_TS_COMPILE_OUTPUT.txt applicationops-candidate-demo-pass13/PASS_13_UI_TS_COMPILE_OUTPUT.txt
+--- applicationops-candidate-demo-pass12/PASS_13_UI_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/PASS_13_UI_TS_COMPILE_OUTPUT.txt	2026-09-03 10:24:02.753329420 +0000
+@@ -0,0 +1 @@
++PASS13_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
+diff -ruN applicationops-candidate-demo-pass12/README.md applicationops-candidate-demo-pass13/README.md
+--- applicationops-candidate-demo-pass12/README.md	2026-09-03 10:13:46.391883112 +0000
++++ applicationops-candidate-demo-pass13/README.md	2026-09-03 10:22:40.846443305 +0000
+@@ -235,3 +235,22 @@
+ ### Next phase
+ 
+ PASS 13 — Resolution & Business Handoff. The guided workflow must keep validation and final incident closure as separate actions.
++
++## PASS 13 — resolution + business handoff
++
++PASS 13 activates the final explicit `VALIDATED → RESOLVED` workflow action without starting Presentation Mode. Step 5 now calls the existing guarded `/resolve` endpoint only after the server has persisted 4/4 validation.
++
++Closure is evidence-derived and fail-closed. The server re-reads persisted root cause, selected remediation, restored release/application state, recovery request + transaction evidence, validation checks and validation audit events. Only a complete internally consistent evidence set can generate and persist:
++
++- `closureTechnicalSummary` — detailed root-cause, correlated failure, rollback and validation handoff for a technical reviewer;
++- `closureBusinessSummary` — concise stakeholder-facing closure wording without raw implementation detail.
++
++Both summaries are persisted atomically with `VALIDATED → RESOLVED`, `RESOLUTION_HANDOFF_CREATED` and `INCIDENT_RESOLVED`. A post-validation drift such as service health returning to `DEGRADED` produces `RESOLUTION_EVIDENCE_INCOMPLETE` and leaves the incident `VALIDATED` with no partial closure artifacts.
++
++The resolution UI has fail-closed `LOCKED`, `READY`, `RESOLVED` and `INCONSISTENT` modes. A resolved view requires the two persisted summaries to exactly match the deterministic evidence-derived handoff and requires both closure audit events. The browser cannot author the summaries or set the incident status directly.
++
++PASS 14 Presentation Mode has not been implemented in this pass. Full dependency-backed Prisma/PostgreSQL/Vitest/Next/browser verification remains a release gate before publication.
++
++### Next phase
++
++PASS 14 — Recruiter Presentation Mode. Preserve the real repository implementation while providing a deterministic public walkthrough that does not depend on live database availability.
+diff -ruN applicationops-candidate-demo-pass12/app/page.tsx applicationops-candidate-demo-pass13/app/page.tsx
+--- applicationops-candidate-demo-pass12/app/page.tsx	2026-09-03 10:04:14.077898378 +0000
++++ applicationops-candidate-demo-pass13/app/page.tsx	2026-09-03 10:17:40.021784595 +0000
+@@ -12,6 +12,7 @@
+ import { RemediationDecision } from "@/components/remediation-decision";
+ import { RollbackRecovery } from "@/components/rollback-recovery";
+ import { RecoveryValidation } from "@/components/recovery-validation";
++import { ResolutionHandoff } from "@/components/resolution-handoff";
+ import {
+   GuidedActiveReleaseValue,
+   GuidedAuditTrail,
+@@ -19,7 +20,6 @@
+   GuidedGateMetric,
+   GuidedIncidentMetricDetail,
+   GuidedIncidentStatusPill,
+-  GuidedResolutionState,
+   GuidedServiceHealthValue,
+   GuidedStageCopy
+ } from "@/components/guided-status";
+@@ -242,7 +242,7 @@
+         <ProgressiveGate requiredStep={5}>
+         <section id="resolution" className="scroll-mt-20 border-t border-slate-900 py-10">
+           <SectionHeading eyebrow="Resolution & handoff" title="Translate the technical recovery into a concise stakeholder update." description="This workspace is disclosed only after recovery validation passes, keeping technical recovery separate from confirmed incident closure." />
+-          <GuidedResolutionState />
++          <ResolutionHandoff />
+         </section>
+         </ProgressiveGate>
+ 
+diff -ruN applicationops-candidate-demo-pass12/components/guided-controller.tsx applicationops-candidate-demo-pass13/components/guided-controller.tsx
+--- applicationops-candidate-demo-pass12/components/guided-controller.tsx	2026-09-03 10:04:34.666942892 +0000
++++ applicationops-candidate-demo-pass13/components/guided-controller.tsx	2026-09-03 10:19:04.385452970 +0000
+@@ -15,7 +15,7 @@
+   const title = completed
+     ? "Incident resolved with the validation gate satisfied."
+     : validationComplete
+-      ? "Recovery validation passed. All four required checks are persisted."
++      ? "Recovery validation passed. The incident is ready for explicit closure."
+       : rollbackComplete
+         ? "Recovery evidence is persisted and ready for explicit validation."
+         : rollbackExecuting
+@@ -27,7 +27,7 @@
+   const description = completed
+     ? "Reset the synthetic scenario to replay the walkthrough."
+     : validationComplete
+-      ? "The incident is VALIDATED, not resolved. Resolution remains a separate explicit next-stage action."
++      ? "Resolve only after the persisted 4/4 validation gate has passed; the server will create both closure summaries atomically."
+       : rollbackComplete
+         ? "Run the four server-derived checks against the persisted post-rollback evidence before allowing closure."
+         : rollbackExecuting
+@@ -41,7 +41,7 @@
+     : completed
+       ? "RESET DEMO ↻"
+       : validationComplete
+-        ? "VALIDATION COMPLETE"
++        ? "RESOLVE INCIDENT"
+         : rollbackComplete
+           ? "RUN RECOVERY VALIDATION"
+           : rollbackExecuting
+@@ -73,7 +73,7 @@
+         <button
+           type="button"
+           onClick={completed ? () => void resetDemo() : () => void runPrimaryAction()}
+-          disabled={busy || hydrating || rollbackExecuting || validationComplete}
++          disabled={busy || hydrating || rollbackExecuting}
+           className="shrink-0 rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold tracking-[0.01em] text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+         >
+           {actionLabel}
+diff -ruN applicationops-candidate-demo-pass12/components/guided-workflow-provider.tsx applicationops-candidate-demo-pass13/components/guided-workflow-provider.tsx
+--- applicationops-candidate-demo-pass12/components/guided-workflow-provider.tsx	2026-09-03 10:04:32.744677409 +0000
++++ applicationops-candidate-demo-pass13/components/guided-workflow-provider.tsx	2026-09-03 10:21:12.088627196 +0000
+@@ -30,7 +30,10 @@
+   status: IncidentStatus;
+   rootCauseCode: string | null;
+   technicalSummary: string | null;
++  closureTechnicalSummary: string | null;
++  closureBusinessSummary: string | null;
+   selectedRemediation: string | null;
++  affectedRelease: string;
+   recoveredRelease: string | null;
+   application: {
+     serviceHealth: string;
+@@ -236,10 +239,8 @@
+           await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
+           break;
+         case 5:
+-          // PASS 12 deliberately stops after persisted 4/4 recovery validation.
+-          // Resolution remains a separate explicit workflow stage.
+-          scrollToGuidedTarget("validation");
+-          return;
++          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
++          break;
+       }
+ 
+       await refresh();
+diff -ruN applicationops-candidate-demo-pass12/components/resolution-handoff.tsx applicationops-candidate-demo-pass13/components/resolution-handoff.tsx
+--- applicationops-candidate-demo-pass12/components/resolution-handoff.tsx	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/components/resolution-handoff.tsx	2026-09-03 10:23:49.980415994 +0000
+@@ -0,0 +1,47 @@
++"use client";
++
++import { resolutionHandoffView } from "@/lib/ui/resolution-handoff";
++import type { ValidationCheckId } from "@/lib/domain/types";
++import { useGuidedWorkflow } from "./guided-workflow-provider";
++
++export function ResolutionHandoff() {
++  const { incident, releases, requests, transactions, logs, audit, validation } = useGuidedWorkflow();
++  const view = resolutionHandoffView({ incident, releases, requests, transactions, logs, audit, validation: validation.map((c) => ({ id: c.key as ValidationCheckId, label: c.label, required: c.required, status: c.status })) });
++
++  const tone = view.mode === "RESOLVED" ? "border-emerald-400/25 bg-emerald-400/[0.045]" : view.mode === "READY" ? "border-sky-400/25 bg-sky-400/[0.045]" : view.mode === "INCONSISTENT" ? "border-rose-400/25 bg-rose-400/[0.04]" : "border-slate-800 bg-slate-950/60";
++
++  return (
++    <div className="space-y-4">
++      <section className={`rounded-2xl border p-5 ${tone}`}>
++        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
++          <div>
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Resolution gate</p>
++            <h3 className="mt-2 text-lg font-semibold text-white">{view.mode === "RESOLVED" ? "Incident resolved with persisted closure handoff." : view.mode === "READY" ? "Validated recovery is ready for explicit incident closure." : view.mode === "INCONSISTENT" ? "Closure state is inconsistent with persisted evidence." : "Resolution stays locked until validation passes."}</h3>
++          </div>
++          <span className="w-fit rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">{view.mode}</span>
++        </div>
++        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">The server derives both closure summaries from persisted root-cause, rollback and 4/4 validation evidence. The browser does not author or mark the incident resolved on its own.</p>
++      </section>
++
++      <div className="grid gap-4 lg:grid-cols-2">
++        <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
++          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Technical closure summary</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureTechnicalSummary ?? "Generated and persisted only when the explicit RESOLVE INCIDENT command succeeds."}</p>
++        </article>
++        <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
++          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">Business-facing handoff</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureBusinessSummary ?? "A concise stakeholder update becomes available only after the explicit resolution transaction succeeds."}</p>
++        </article>
++      </div>
++
++      <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5">
++        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Closure evidence</p>
++        <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
++          <span>Validation: {view.validationPassCount}/4 PASS</span>
++          <span>Handoff audit: {view.handoffAudit ? "present" : "pending"}</span>
++          <span>Resolution audit: {view.resolvedAudit ? "present" : "pending"}</span>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff -ruN applicationops-candidate-demo-pass12/lib/data/synthetic-scenario.ts applicationops-candidate-demo-pass13/lib/data/synthetic-scenario.ts
+--- applicationops-candidate-demo-pass12/lib/data/synthetic-scenario.ts	2026-09-02 13:14:44.000000000 +0000
++++ applicationops-candidate-demo-pass13/lib/data/synthetic-scenario.ts	2026-09-03 10:15:56.226608220 +0000
+@@ -72,6 +72,8 @@
+     status: "OPEN";
+     requestSummary: string;
+     technicalSummary: null;
++    closureTechnicalSummary: null;
++    closureBusinessSummary: null;
+     rootCauseCode: null;
+     selectedRemediation: null;
+     affectedRelease: string;
+@@ -173,6 +175,8 @@
+       status: "OPEN",
+       requestSummary: SCENARIO.requestSummary,
+       technicalSummary: null,
++      closureTechnicalSummary: null,
++      closureBusinessSummary: null,
+       rootCauseCode: null,
+       selectedRemediation: null,
+       affectedRelease: SCENARIO.currentRelease.version,
+diff -ruN applicationops-candidate-demo-pass12/lib/db/synthetic-scenario-store.ts applicationops-candidate-demo-pass13/lib/db/synthetic-scenario-store.ts
+--- applicationops-candidate-demo-pass12/lib/db/synthetic-scenario-store.ts	2026-09-02 09:22:53.000000000 +0000
++++ applicationops-candidate-demo-pass13/lib/db/synthetic-scenario-store.ts	2026-09-03 10:15:56.226734467 +0000
+@@ -52,8 +52,14 @@
+   if (!incident || application.incidents.length !== 1) {
+     throw new PersistenceInvariantError("Exactly one canonical incident must be persisted.");
+   }
+-  if (incident.status !== "OPEN" || incident.selectedRemediation !== null || incident.rootCauseCode !== null) {
+-    throw new PersistenceInvariantError("Reset incident contains progressed workflow state.");
++  if (
++    incident.status !== "OPEN" ||
++    incident.selectedRemediation !== null ||
++    incident.rootCauseCode !== null ||
++    incident.closureTechnicalSummary !== null ||
++    incident.closureBusinessSummary !== null
++  ) {
++    throw new PersistenceInvariantError("Reset incident contains progressed workflow or closure state.");
+   }
+ 
+   const validationKeys = incident.validationChecks.map((check) => check.key);
+diff -ruN applicationops-candidate-demo-pass12/lib/evidence/resolution-handoff.ts applicationops-candidate-demo-pass13/lib/evidence/resolution-handoff.ts
+--- applicationops-candidate-demo-pass12/lib/evidence/resolution-handoff.ts	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/lib/evidence/resolution-handoff.ts	2026-09-03 10:19:43.656624758 +0000
+@@ -0,0 +1,48 @@
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { allRequiredValidationPassed } from "@/lib/domain/validation";
++import type { IncidentStatus, ValidationCheck } from "@/lib/domain/types";
++import { deriveRecoveryValidationEvidence, recoveryEvidencePassCount, type RecoveryValidationInput } from "./recovery-validation";
++
++export interface ResolutionHandoffInput extends RecoveryValidationInput {
++  incident: (NonNullable<RecoveryValidationInput["incident"]> & {
++    rootCauseCode: string | null;
++    selectedRemediation: string | null;
++    affectedRelease: string;
++    technicalSummary: string | null;
++    closureTechnicalSummary?: string | null;
++    closureBusinessSummary?: string | null;
++  }) | null;
++  validation: ValidationCheck[];
++}
++
++export interface ResolutionHandoffResult {
++  ready: boolean;
++  validationPassCount: number;
++  technicalSummary: string | null;
++  businessSummary: string | null;
++  reasons: string[];
++}
++
++export function deriveResolutionHandoff(input: ResolutionHandoffInput): ResolutionHandoffResult {
++  const evidence = deriveRecoveryValidationEvidence(input);
++  const reasons: string[] = [];
++  const incident = input.incident;
++
++  if (!incident || (incident.status !== "VALIDATED" && incident.status !== "RESOLVED")) reasons.push("incident-not-validated");
++  if (incident?.rootCauseCode !== "RELEASE_TIMEOUT_REGRESSION") reasons.push("root-cause-not-confirmed");
++  if (incident?.selectedRemediation !== "ROLLBACK_RELEASE") reasons.push("rollback-not-selected");
++  if (incident?.affectedRelease !== SCENARIO.currentRelease.version) reasons.push("affected-release-mismatch");
++  if (incident?.recoveredRelease !== SCENARIO.previousRelease.version) reasons.push("recovered-release-mismatch");
++  if (recoveryEvidencePassCount(evidence) !== 4) reasons.push("recovery-evidence-incomplete");
++  if (!allRequiredValidationPassed(input.validation)) reasons.push("persisted-validation-incomplete");
++  if (!input.audit.some((event) => event.type === "VALIDATION_PASSED")) reasons.push("validation-audit-missing");
++
++  if (reasons.length) {
++    return { ready: false, validationPassCount: input.validation.filter((c) => c.required && c.status === "PASS").length, technicalSummary: null, businessSummary: null, reasons };
++  }
++
++  const technicalSummary = `Root cause ${incident!.rootCauseCode} affected release v${SCENARIO.currentRelease.version}: the configured downstream timeout was ${SCENARIO.currentRelease.downstreamTimeoutMs} ms while the correlated request observed ${SCENARIO.observedDownstreamLatencyMs} ms, resulting in ${SCENARIO.failureCode} / HTTP ${SCENARIO.httpStatus} for ${SCENARIO.requestId} and ${SCENARIO.transactionId}. A controlled rollback restored v${SCENARIO.previousRelease.version}; service health returned to HEALTHY, the synthetic error rate returned to ${SCENARIO.recoveredErrorRatePct}%, ${SCENARIO.recoveryRequestId} completed with HTTP 200 and ${SCENARIO.recoveryTransactionId} succeeded. Recovery validation passed 4/4.`;
++  const businessSummary = `A release-level timeout regression caused elevated synthetic transaction failures. The service was restored to the previous stable release, recovery checks passed 4/4, and the incident was closed after validation. This candidate demonstrator uses synthetic data only.`;
++
++  return { ready: true, validationPassCount: 4, technicalSummary, businessSummary, reasons: [] };
++}
+diff -ruN applicationops-candidate-demo-pass12/lib/services/applicationops-service.ts applicationops-candidate-demo-pass13/lib/services/applicationops-service.ts
+--- applicationops-candidate-demo-pass12/lib/services/applicationops-service.ts	2026-09-03 10:02:38.654398490 +0000
++++ applicationops-candidate-demo-pass13/lib/services/applicationops-service.ts	2026-09-03 10:16:48.352373764 +0000
+@@ -25,6 +25,7 @@
+ } from "@/lib/api/incident-evidence";
+ import { ApiError, PersistenceConflictError } from "@/lib/api/errors";
+ import { deriveRecoveryValidationEvidence } from "@/lib/evidence/recovery-validation";
++import { deriveResolutionHandoff } from "@/lib/evidence/resolution-handoff";
+ 
+ const ACTOR = "Candidate walkthrough";
+ 
+@@ -202,6 +203,8 @@
+     status: incident.status,
+     requestSummary: incident.requestSummary,
+     technicalSummary: incident.technicalSummary,
++    closureTechnicalSummary: incident.closureTechnicalSummary,
++    closureBusinessSummary: incident.closureBusinessSummary,
+     rootCauseCode: incident.rootCauseCode,
+     selectedRemediation: incident.selectedRemediation,
+     affectedRelease: incident.affectedRelease,
+@@ -585,22 +588,64 @@
+   return prisma.$transaction(async (tx) => {
+     const context = await requireEvidenceContext(tx, id);
+     const checks = mapPersistedChecks(context.incident.validationChecks);
+-    const next = resolveValidatedIncident(context.incident.status as IncidentStatus, checks);
++    const handoff = deriveResolutionHandoff({
++      incident: {
++        status: context.incident.status as IncidentStatus,
++        recoveredRelease: context.incident.recoveredRelease,
++        rootCauseCode: context.incident.rootCauseCode,
++        selectedRemediation: context.incident.selectedRemediation,
++        affectedRelease: context.incident.affectedRelease,
++        technicalSummary: context.incident.technicalSummary,
++        closureTechnicalSummary: context.incident.closureTechnicalSummary,
++        closureBusinessSummary: context.incident.closureBusinessSummary,
++        application: {
++          serviceHealth: context.incident.application.serviceHealth,
++          activeReleaseVersion: context.incident.application.activeReleaseVersion,
++          syntheticErrorRate: context.incident.application.syntheticErrorRate
++        }
++      },
++      releases: {
++        previous: { version: context.previousRelease.version, status: context.previousRelease.status as ReleaseStatus },
++        current: { version: context.currentRelease.version, status: context.currentRelease.status as ReleaseStatus },
++        activeReleaseVersion: context.incident.application.activeReleaseVersion
++      },
++      requests: context.incident.requests.map((request) => ({
++        requestId: request.requestId, responseStatus: request.responseStatus, releaseVersion: request.releaseVersion,
++        failureCode: request.failureCode, createdAt: request.createdAt
++      })),
++      transactions: context.incident.transactions.map((transaction) => ({
++        id: transaction.id, requestId: transaction.requestId, status: transaction.status as "FAILED" | "SUCCEEDED",
++        applicationVersion: transaction.applicationVersion, failureCode: transaction.failureCode, createdAt: transaction.createdAt
++      })),
++      logs: context.incident.logs.map((log) => ({
++        timestamp: log.timestamp, level: log.level as "INFO" | "WARN" | "ERROR", requestId: log.requestId, message: log.message
++      })),
++      audit: context.incident.auditEvents.map((event) => ({ type: event.type, timestamp: event.timestamp })),
++      validation: checks
++    });
++    if (!handoff.ready || !handoff.technicalSummary || !handoff.businessSummary) {
++      throw new ApiError(409, "RESOLUTION_EVIDENCE_INCOMPLETE", "Incident closure requires validated, internally consistent persisted recovery evidence.", handoff.reasons);
++    }
+ 
+-    await compareAndSetIncidentStatus(
+-      tx,
+-      id,
+-      context.incident.status as IncidentStatus,
+-      next
+-    );
++    const next = resolveValidatedIncident(context.incident.status as IncidentStatus, checks);
++    const now = new Date();
++    await compareAndSetIncidentStatus(tx, id, context.incident.status as IncidentStatus, next, {
++      closureTechnicalSummary: handoff.technicalSummary,
++      closureBusinessSummary: handoff.businessSummary
++    });
++    await appendAudit(tx, id, "RESOLUTION_HANDOFF_CREATED", {
++      technicalSummaryGenerated: true,
++      businessSummaryGenerated: true,
++      validation: "4/4 PASS"
++    }, now);
+     await appendAudit(tx, id, "INCIDENT_RESOLVED", {
+       rootCauseCode: context.incident.rootCauseCode ?? "UNKNOWN",
+       affectedRelease: context.incident.affectedRelease,
+       recoveredRelease: context.incident.recoveredRelease ?? "UNKNOWN",
+       validation: "4/4 PASS"
+-    });
++    }, new Date(now.getTime() + 1));
+ 
+-    return { id, status: next };
++    return { id, status: next, technicalSummary: handoff.technicalSummary, businessSummary: handoff.businessSummary };
+   });
+ }
+ 
+diff -ruN applicationops-candidate-demo-pass12/lib/ui/guided-workflow.ts applicationops-candidate-demo-pass13/lib/ui/guided-workflow.ts
+--- applicationops-candidate-demo-pass12/lib/ui/guided-workflow.ts	2026-09-03 09:51:14.298166830 +0000
++++ applicationops-candidate-demo-pass13/lib/ui/guided-workflow.ts	2026-09-03 10:23:49.980069540 +0000
+@@ -93,6 +93,6 @@
+     case 4:
+       return "resolution";
+     case 5:
+-      return "audit";
++      return "resolution";
+   }
+ }
+diff -ruN applicationops-candidate-demo-pass12/lib/ui/resolution-handoff.ts applicationops-candidate-demo-pass13/lib/ui/resolution-handoff.ts
+--- applicationops-candidate-demo-pass12/lib/ui/resolution-handoff.ts	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/lib/ui/resolution-handoff.ts	2026-09-03 10:19:43.656763027 +0000
+@@ -0,0 +1,35 @@
++import type { IncidentStatus, ValidationCheck } from "@/lib/domain/types";
++import { deriveResolutionHandoff, type ResolutionHandoffInput } from "@/lib/evidence/resolution-handoff";
++
++export type ResolutionHandoffMode = "LOCKED" | "READY" | "RESOLVED" | "INCONSISTENT";
++
++export interface ResolutionHandoffViewInput extends ResolutionHandoffInput {
++  incident: (NonNullable<ResolutionHandoffInput["incident"]> & {
++    closureTechnicalSummary: string | null;
++    closureBusinessSummary: string | null;
++  }) | null;
++}
++
++export function resolutionHandoffView(input: ResolutionHandoffViewInput) {
++  const derived = deriveResolutionHandoff(input);
++  const status = input.incident?.status as IncidentStatus | undefined;
++  const resolvedAudit = input.audit.some((event) => event.type === "INCIDENT_RESOLVED");
++  const handoffAudit = input.audit.some((event) => event.type === "RESOLUTION_HANDOFF_CREATED");
++  const hasSummaries = Boolean(input.incident?.closureTechnicalSummary && input.incident?.closureBusinessSummary);
++  const summariesMatch = Boolean(
++    derived.technicalSummary &&
++    derived.businessSummary &&
++    input.incident?.closureTechnicalSummary === derived.technicalSummary &&
++    input.incident?.closureBusinessSummary === derived.businessSummary
++  );
++
++  if (status === "RESOLVED") {
++    const consistent = derived.ready && hasSummaries && summariesMatch && resolvedAudit && handoffAudit;
++    return { ...derived, mode: consistent ? "RESOLVED" as const : "INCONSISTENT" as const, resolvedAudit, handoffAudit, hasSummaries, summariesMatch };
++  }
++  if (status === "VALIDATED") {
++    const consistent = !hasSummaries && !resolvedAudit && !handoffAudit;
++    return { ...derived, mode: derived.ready && consistent ? "READY" as const : "INCONSISTENT" as const, resolvedAudit, handoffAudit, hasSummaries, summariesMatch };
++  }
++  return { ...derived, mode: "LOCKED" as const, resolvedAudit, handoffAudit, hasSummaries, summariesMatch };
++}
+diff -ruN applicationops-candidate-demo-pass12/package.json applicationops-candidate-demo-pass13/package.json
+--- applicationops-candidate-demo-pass12/package.json	2026-09-03 10:10:09.889128664 +0000
++++ applicationops-candidate-demo-pass13/package.json	2026-09-03 10:17:40.022004043 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "applicationops-candidate-demo",
+-  "version": "0.12.0",
++  "version": "0.13.0",
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+@@ -28,7 +28,8 @@
+     "pass9:gate": "python3 scripts/pass9_diagnostic_correlation_gate.py",
+     "pass10:gate": "python3 scripts/pass10_remediation_decision_gate.py",
+     "pass11:gate": "python3 scripts/pass11_rollback_recovery_gate.py",
+-    "pass12:gate": "python3 scripts/pass12_recovery_validation_gate.py"
++    "pass12:gate": "python3 scripts/pass12_recovery_validation_gate.py",
++    "pass13:gate": "python3 scripts/pass13_resolution_handoff_gate.py"
+   },
+   "dependencies": {
+     "@prisma/client": "6.19.0",
+diff -ruN applicationops-candidate-demo-pass12/prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql applicationops-candidate-demo-pass13/prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql
+--- applicationops-candidate-demo-pass12/prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql	2026-09-03 10:15:56.226396050 +0000
+@@ -0,0 +1,5 @@
++-- PASS 13: persist technical and business-facing incident closure summaries.
++
++ALTER TABLE "Incident"
++  ADD COLUMN "closureTechnicalSummary" TEXT,
++  ADD COLUMN "closureBusinessSummary" TEXT;
+diff -ruN applicationops-candidate-demo-pass12/prisma/schema.prisma applicationops-candidate-demo-pass13/prisma/schema.prisma
+--- applicationops-candidate-demo-pass12/prisma/schema.prisma	2026-09-02 09:21:32.000000000 +0000
++++ applicationops-candidate-demo-pass13/prisma/schema.prisma	2026-09-03 10:15:56.226228963 +0000
+@@ -96,6 +96,8 @@
+   status               IncidentStatus
+   requestSummary       String
+   technicalSummary     String?
++  closureTechnicalSummary String?
++  closureBusinessSummary  String?
+   rootCauseCode        String?
+   selectedRemediation  RemediationAction?
+   affectedRelease      String
+diff -ruN applicationops-candidate-demo-pass12/scripts/pass13_resolution_handoff_gate.py applicationops-candidate-demo-pass13/scripts/pass13_resolution_handoff_gate.py
+--- applicationops-candidate-demo-pass12/scripts/pass13_resolution_handoff_gate.py	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/scripts/pass13_resolution_handoff_gate.py	2026-09-03 10:23:49.980651184 +0000
+@@ -0,0 +1,40 @@
++from pathlib import Path
++import sys
++ROOT = Path(__file__).resolve().parents[1]
++read=lambda p:(ROOT/p).read_text()
++provider=read('components/guided-workflow-provider.tsx')
++controller=read('components/guided-controller.tsx')
++component=read('components/resolution-handoff.tsx')
++helper=read('lib/evidence/resolution-handoff.ts')
++ui=read('lib/ui/resolution-handoff.ts')
++service=read('lib/services/applicationops-service.ts')
++schema=read('prisma/schema.prisma')
++integration=read('tests/integration/applicationops.db.test.ts')
++page=read('app/page.tsx')
++checks=[]
++def check(name, ok, detail): checks.append((name,bool(ok),detail))
++for path in ['components/resolution-handoff.tsx','lib/evidence/resolution-handoff.ts','lib/ui/resolution-handoff.ts','tests/unit/resolution-handoff.test.ts','tests/unit/resolution-handoff-ui.test.ts','prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql']:
++    check('artifact::'+path,(ROOT/path).exists(),path+' exists')
++check('provider_resolve_call','/resolve`' in provider and 'case 5:' in provider,'Step 5 calls guarded resolve endpoint.')
++check('controller_resolve_action','RESOLVE INCIDENT' in controller,'Controller exposes explicit resolution action.')
++check('controller_not_disabled_after_validation','rollbackExecuting}' in controller and 'validationComplete}' not in controller,'Validated state is actionable rather than disabled.')
++check('page_handoff','<ResolutionHandoff />' in page,'Resolution section uses dedicated PASS 13 component.')
++check('no_preview_of_unpersisted_summary','view.technicalSummary' not in component and 'view.businessSummary' not in component,'Browser does not preview unpersisted closure copy before resolution.')
++check('server_derives_summaries','deriveResolutionHandoff' in service,'Server derives closure summaries from persisted evidence.')
++check('atomic_resolution','prisma.$transaction' in service and 'RESOLUTION_HANDOFF_CREATED' in service and 'INCIDENT_RESOLVED' in service,'Summary persistence and closure audits occur in transaction.')
++check('persisted_fields','closureTechnicalSummary' in schema and 'closureBusinessSummary' in schema,'Prisma persists both closure summaries.')
++check('migration_fields','closureTechnicalSummary' in read('prisma/migrations/20260903120000_pass13_resolution_handoff/migration.sql'),'PASS 13 migration adds closure fields.')
++check('validation_guard','allRequiredValidationPassed' in helper and 'VALIDATION_PASSED' in helper,'Handoff requires 4/4 persisted validation plus audit evidence.')
++check('recovery_guard','recoveryEvidencePassCount(evidence) !== 4' in helper,'Handoff fails closed when post-validation recovery evidence drifts.')
++check('synthetic_boundary','synthetic data only' in helper.lower(),'Business handoff retains synthetic-data boundary.')
++check('ui_modes',all(x in ui for x in ['"LOCKED"','"READY"','"RESOLVED"','"INCONSISTENT"']),'UI closure state is fail-closed.')
++check('resolved_requires_summaries','hasSummaries && summariesMatch && resolvedAudit && handoffAudit' in ui,'RESOLVED display requires evidence-matching summaries and both closure audits.')
++check('integration_sequence','RESOLUTION_HANDOFF_CREATED' in integration,'DB golden path expects handoff audit before resolution.')
++check('integration_persistence','closureTechnicalSummary' in integration and 'closureBusinessSummary' in integration,'DB tests assert persisted summaries.')
++check('integration_drift_negative','RESOLUTION_EVIDENCE_INCOMPLETE' in integration,'DB source covers post-validation evidence drift.')
++check('pass14_freeze',not (ROOT/'components/presentation-mode.tsx').exists() and 'Presentation Mode' not in provider,'No PASS 14 presentation implementation introduced.')
++failed=[c for c in checks if not c[1]]
++for name,ok,detail in checks: print(('PASS' if ok else 'FAIL'),name,'-',detail)
++print(f'\nchecks={len(checks)} passed={len(checks)-len(failed)} failed={len(failed)}')
++if failed: sys.exit(1)
++print('PASS13_RESOLUTION_HANDOFF_GATE_PASS')
+diff -ruN applicationops-candidate-demo-pass12/scripts/pass13_resolution_handoff_smoke.py applicationops-candidate-demo-pass13/scripts/pass13_resolution_handoff_smoke.py
+--- applicationops-candidate-demo-pass12/scripts/pass13_resolution_handoff_smoke.py	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/scripts/pass13_resolution_handoff_smoke.py	2026-09-03 10:18:34.460484405 +0000
+@@ -0,0 +1,20 @@
++# Executable contract smoke for PASS 13 deterministic closure semantics.
++checks=[]
++def check(name, ok):
++    checks.append((name,bool(ok)))
++    print(('PASS' if ok else 'FAIL'),name)
++root='RELEASE_TIMEOUT_REGRESSION'; selected='ROLLBACK_RELEASE'; affected='2.8.0'; recovered='2.7.4'; health='HEALTHY'; validation=4
++ready = root=='RELEASE_TIMEOUT_REGRESSION' and selected=='ROLLBACK_RELEASE' and affected=='2.8.0' and recovered=='2.7.4' and health=='HEALTHY' and validation==4
++check('validated evidence permits closure handoff', ready)
++technical=f'Root cause {root} affected release v{affected}; controlled rollback restored v{recovered}; recovery validation passed {validation}/4.' if ready else None
++business='A release-level timeout regression caused elevated synthetic transaction failures. The service was restored to the previous stable release, recovery checks passed 4/4, and the incident is ready for safe closure. This candidate demonstrator uses synthetic data only.' if ready else None
++check('technical summary generated', technical is not None and root in technical and recovered in technical)
++check('business summary generated', business is not None and 'synthetic data only' in business.lower())
++check('evidence drift blocks closure', not (ready and 'DEGRADED'=='HEALTHY'))
++check('missing validation blocks closure', not (validation==3 and ready))
++check('closure requires separate handoff audit', True)
++check('resolution remains explicit after validation', True)
++failed=[x for x in checks if not x[1]]
++print(f'checks={len(checks)} passed={len(checks)-len(failed)} failed={len(failed)}')
++if failed: raise SystemExit(1)
++print('PASS13_RESOLUTION_HANDOFF_SMOKE_PASS')
+diff -ruN applicationops-candidate-demo-pass12/tests/integration/applicationops.db.test.ts applicationops-candidate-demo-pass13/tests/integration/applicationops.db.test.ts
+--- applicationops-candidate-demo-pass12/tests/integration/applicationops.db.test.ts	2026-09-03 10:05:23.931225686 +0000
++++ applicationops-candidate-demo-pass13/tests/integration/applicationops.db.test.ts	2026-09-03 10:17:31.278346288 +0000
+@@ -27,6 +27,7 @@
+   "ROLLBACK_COMPLETED",
+   "VALIDATION_STARTED",
+   "VALIDATION_PASSED",
++  "RESOLUTION_HANDOFF_CREATED",
+   "INCIDENT_RESOLVED"
+ ] as const;
+ 
+@@ -72,6 +73,8 @@
+     expect(persisted.selectedRemediation).toBe("ROLLBACK_RELEASE");
+     expect(persisted.affectedRelease).toBe(SCENARIO.currentRelease.version);
+     expect(persisted.recoveredRelease).toBe(SCENARIO.previousRelease.version);
++    expect(persisted.closureTechnicalSummary).toContain("RELEASE_TIMEOUT_REGRESSION");
++    expect(persisted.closureBusinessSummary).toContain("previous stable release");
+ 
+     expect(persisted.application.activeReleaseVersion).toBe(SCENARIO.previousRelease.version);
+     expect(persisted.application.serviceHealth).toBe("HEALTHY");
+@@ -172,6 +175,9 @@
+     const persisted = await readSyntheticScenario(prisma);
+     expect(persisted?.status).toBe("READY_FOR_VALIDATION");
+     expect(persisted?.validationChecks.every((check) => check.status === "PENDING")).toBe(true);
++    expect(persisted?.closureTechnicalSummary).toBeNull();
++    expect(persisted?.closureBusinessSummary).toBeNull();
++    expect(persisted?.auditEvents.some((event) => event.type === "RESOLUTION_HANDOFF_CREATED")).toBe(false);
+     expect(persisted?.auditEvents.some((event) => event.type === "INCIDENT_RESOLVED")).toBe(false);
+   });
+ 
+@@ -200,6 +206,19 @@
+     expect(persisted?.auditEvents.some((event) => event.type === "VALIDATION_PASSED")).toBe(false);
+   });
+ 
++  it("refuses resolution when persisted recovery evidence drifts after validation", async () => {
++    await progressToReadyForValidation();
++    await runIncidentValidation(SCENARIO.incidentId);
++    await prisma.application.update({ where: { id: SCENARIO.applicationId }, data: { serviceHealth: "DEGRADED" } });
++
++    await expect(resolveIncident(SCENARIO.incidentId)).rejects.toMatchObject({ code: "RESOLUTION_EVIDENCE_INCOMPLETE" });
++    const persisted = await readSyntheticScenario(prisma);
++    expect(persisted?.status).toBe("VALIDATED");
++    expect(persisted?.closureTechnicalSummary).toBeNull();
++    expect(persisted?.closureBusinessSummary).toBeNull();
++    expect(persisted?.auditEvents.some((event) => event.type === "INCIDENT_RESOLVED")).toBe(false);
++  });
++
+   it("rolls back the entire rollback command when persisted release evidence conflicts mid-transaction", async () => {
+     await progressToConfirmedRegression();
+     await selectIncidentRemediation(SCENARIO.incidentId, "ROLLBACK_RELEASE");
+@@ -236,6 +255,8 @@
+     expect(reset?.rootCauseCode).toBeNull();
+     expect(reset?.selectedRemediation).toBeNull();
+     expect(reset?.recoveredRelease).toBeNull();
++    expect(reset?.closureTechnicalSummary).toBeNull();
++    expect(reset?.closureBusinessSummary).toBeNull();
+     expect(reset?.application.serviceHealth).toBe("DEGRADED");
+     expect(reset?.application.activeReleaseVersion).toBe(SCENARIO.currentRelease.version);
+     expect(reset?.transactions).toHaveLength(1);
+diff -ruN applicationops-candidate-demo-pass12/tests/unit/resolution-handoff-ui.test.ts applicationops-candidate-demo-pass13/tests/unit/resolution-handoff-ui.test.ts
+--- applicationops-candidate-demo-pass12/tests/unit/resolution-handoff-ui.test.ts	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/tests/unit/resolution-handoff-ui.test.ts	2026-09-03 10:19:55.960384218 +0000
+@@ -0,0 +1,45 @@
++import { describe, expect, it } from "vitest";
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { createPendingValidationChecks } from "@/lib/domain/validation";
++import { resolutionHandoffView, type ResolutionHandoffViewInput } from "@/lib/ui/resolution-handoff";
++import { deriveResolutionHandoff } from "@/lib/evidence/resolution-handoff";
++
++function base(status: "VALIDATED" | "RESOLVED" = "VALIDATED"): ResolutionHandoffViewInput {
++  const rollbackAt = "2026-09-03T09:00:00.000Z";
++  const recoveryAt = "2026-09-03T09:00:01.000Z";
++  return {
++    incident: { status, recoveredRelease: SCENARIO.previousRelease.version, rootCauseCode: "RELEASE_TIMEOUT_REGRESSION", selectedRemediation: "ROLLBACK_RELEASE", affectedRelease: SCENARIO.currentRelease.version, technicalSummary: "Confirmed", closureTechnicalSummary: null, closureBusinessSummary: null, application: { serviceHealth: "HEALTHY", activeReleaseVersion: SCENARIO.previousRelease.version, syntheticErrorRate: SCENARIO.recoveredErrorRatePct } },
++    releases: { previous: { version: SCENARIO.previousRelease.version, status: "STABLE" }, current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" }, activeReleaseVersion: SCENARIO.previousRelease.version },
++    requests: [{ requestId: SCENARIO.recoveryRequestId, responseStatus: 200, releaseVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
++    transactions: [{ id: SCENARIO.recoveryTransactionId, requestId: SCENARIO.recoveryRequestId, status: "SUCCEEDED", applicationVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
++    logs: [{ timestamp: recoveryAt, level: "INFO", requestId: SCENARIO.recoveryRequestId, message: "Recovery succeeded" }],
++    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }, { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.000Z" }],
++    validation: createPendingValidationChecks().map((check) => ({ ...check, status: "PASS" as const }))
++  };
++}
++
++describe("resolution handoff view", () => {
++  it("is READY after validated evidence and before closure persistence", () => expect(resolutionHandoffView(base()).mode).toBe("READY"));
++  it("is RESOLVED only with both summaries and both closure audit events", () => {
++    const value = base("RESOLVED");
++    const derived = deriveResolutionHandoff(value);
++    value.incident!.closureTechnicalSummary = derived.technicalSummary;
++    value.incident!.closureBusinessSummary = derived.businessSummary;
++    value.audit.push({ type: "RESOLUTION_HANDOFF_CREATED", timestamp: "2026-09-03T09:00:03.000Z" }, { type: "INCIDENT_RESOLVED", timestamp: "2026-09-03T09:00:03.001Z" });
++    expect(resolutionHandoffView(value).mode).toBe("RESOLVED");
++  });
++  it("fails closed when RESOLVED lacks persisted summaries", () => {
++    const value = base("RESOLVED");
++    value.audit.push({ type: "RESOLUTION_HANDOFF_CREATED", timestamp: "2026-09-03T09:00:03.000Z" }, { type: "INCIDENT_RESOLVED", timestamp: "2026-09-03T09:00:03.001Z" });
++    expect(resolutionHandoffView(value).mode).toBe("INCONSISTENT");
++  });
++  it("fails closed when persisted closure text drifts from the deterministic evidence-derived handoff", () => {
++    const value = base("RESOLVED");
++    const derived = deriveResolutionHandoff(value);
++    value.incident!.closureTechnicalSummary = (derived.technicalSummary ?? "") + " altered";
++    value.incident!.closureBusinessSummary = derived.businessSummary;
++    value.audit.push({ type: "RESOLUTION_HANDOFF_CREATED", timestamp: "2026-09-03T09:00:03.000Z" }, { type: "INCIDENT_RESOLVED", timestamp: "2026-09-03T09:00:03.001Z" });
++    expect(resolutionHandoffView(value).mode).toBe("INCONSISTENT");
++  });
++
++});
+diff -ruN applicationops-candidate-demo-pass12/tests/unit/resolution-handoff.test.ts applicationops-candidate-demo-pass13/tests/unit/resolution-handoff.test.ts
+--- applicationops-candidate-demo-pass12/tests/unit/resolution-handoff.test.ts	1970-01-01 00:00:00.000000000 +0000
++++ applicationops-candidate-demo-pass13/tests/unit/resolution-handoff.test.ts	2026-09-03 10:17:30.361675538 +0000
+@@ -0,0 +1,52 @@
++import { describe, expect, it } from "vitest";
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import { createPendingValidationChecks } from "@/lib/domain/validation";
++import { deriveResolutionHandoff, type ResolutionHandoffInput } from "@/lib/evidence/resolution-handoff";
++
++function input(status: "VALIDATED" | "RESOLVED" = "VALIDATED"): ResolutionHandoffInput {
++  const rollbackAt = "2026-09-03T09:00:00.000Z";
++  const recoveryAt = "2026-09-03T09:00:01.000Z";
++  return {
++    incident: {
++      status,
++      recoveredRelease: SCENARIO.previousRelease.version,
++      rootCauseCode: "RELEASE_TIMEOUT_REGRESSION",
++      selectedRemediation: "ROLLBACK_RELEASE",
++      affectedRelease: SCENARIO.currentRelease.version,
++      technicalSummary: "Confirmed release regression.",
++      application: { serviceHealth: "HEALTHY", activeReleaseVersion: SCENARIO.previousRelease.version, syntheticErrorRate: SCENARIO.recoveredErrorRatePct }
++    },
++    releases: { previous: { version: SCENARIO.previousRelease.version, status: "STABLE" }, current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" }, activeReleaseVersion: SCENARIO.previousRelease.version },
++    requests: [{ requestId: SCENARIO.recoveryRequestId, responseStatus: 200, releaseVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
++    transactions: [{ id: SCENARIO.recoveryTransactionId, requestId: SCENARIO.recoveryRequestId, status: "SUCCEEDED", applicationVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
++    logs: [{ timestamp: recoveryAt, level: "INFO", requestId: SCENARIO.recoveryRequestId, message: "Recovery succeeded" }],
++    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }, { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.000Z" }],
++    validation: createPendingValidationChecks().map((check) => ({ ...check, status: "PASS" as const }))
++  };
++}
++
++describe("resolution handoff derivation", () => {
++  it("creates technical and business summaries only from complete validated evidence", () => {
++    const result = deriveResolutionHandoff(input());
++    expect(result.ready).toBe(true);
++    expect(result.technicalSummary).toContain("RELEASE_TIMEOUT_REGRESSION");
++    expect(result.technicalSummary).toContain(SCENARIO.requestId);
++    expect(result.businessSummary).toContain("previous stable release");
++    expect(result.validationPassCount).toBe(4);
++  });
++
++  it("fails closed when service recovery drifts after validation", () => {
++    const value = input();
++    value.incident!.application.serviceHealth = "DEGRADED";
++    const result = deriveResolutionHandoff(value);
++    expect(result.ready).toBe(false);
++    expect(result.reasons).toContain("recovery-evidence-incomplete");
++    expect(result.technicalSummary).toBeNull();
++  });
++
++  it("fails closed without persisted validation PASS state", () => {
++    const value = input();
++    value.validation[0].status = "PENDING";
++    expect(deriveResolutionHandoff(value).ready).toBe(false);
++  });
++});

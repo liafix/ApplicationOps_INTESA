@@ -1,0 +1,378 @@
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/README.md ./README.md
+--- /mnt/data/applicationops-candidate-demo-pass10/README.md	2026-09-03 09:47:21.471222091 +0000
++++ ./README.md	2026-09-03 09:51:14.299571115 +0000
+@@ -196,3 +196,10 @@
+ - `ROLLBACK_RELEASE` is recorded through the existing guarded remediation endpoint;
+ - the browser does not recompute root cause or mutate incident status directly;
+ - rollback execution is intentionally not triggered by the PASS 10 UI. Recovery remains a separate controlled action for the next pass.
++
++
++## PASS 11 — controlled rollback + recovery
++
++PASS 11 separates remediation decision from execution. After `ROLLBACK_RELEASE` is persisted, the guided controller executes the existing guarded `/rollback` command. The backend transaction moves the affected release to `ROLLED_BACK`, restores v2.7.4 as active, changes synthetic service health to `HEALTHY`, records the recovered error-rate state, appends rollback audit events, and creates synthetic recovery request/transaction/log evidence.
++
++The UI shows a before/after service-state comparison and fails closed if any persisted recovery evidence is missing. It intentionally stops at `READY_FOR_VALIDATION`; PASS 12 validation is not executed by the guided UI in this pass.
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/app/page.tsx ./app/page.tsx
+--- /mnt/data/applicationops-candidate-demo-pass10/app/page.tsx	2026-09-03 09:20:41.572862401 +0000
++++ ./app/page.tsx	2026-09-03 09:54:11.396301549 +0000
+@@ -10,6 +10,7 @@
+ import { RootCauseEvidence } from "@/components/root-cause-evidence";
+ import { DiagnosticCorrelation } from "@/components/diagnostic-correlation";
+ import { RemediationDecision } from "@/components/remediation-decision";
++import { RollbackRecovery } from "@/components/rollback-recovery";
+ import {
+   GuidedActiveReleaseValue,
+   GuidedAuditTrail,
+@@ -216,9 +217,20 @@
+         </section>
+         </ProgressiveGate>
+ 
++        <ProgressiveGate requiredStep={3}>
++        <section id="rollback-recovery" className="scroll-mt-20 border-t border-slate-900 py-10">
++          <SectionHeading
++            eyebrow="Controlled rollback & recovery"
++            title="Execute the reversible action, then compare the persisted service state before and after."
++            description="The rollback restores the known-good synthetic release and writes recovery evidence atomically. Recovery is visible here, while formal validation remains a separate next-stage gate."
++          />
++          <RollbackRecovery />
++        </section>
++        </ProgressiveGate>
++
+         <ProgressiveGate requiredStep={4}>
+         <section id="validation" className="scroll-mt-20 border-t border-slate-900 py-10">
+-          <SectionHeading eyebrow="Recovery validation" title="Remediation is not the same as resolution." description="All four canonical recovery checks remain pending until the rollback is complete and the guided validation action derives their result from persisted evidence." />
++          <SectionHeading eyebrow="Recovery validation" title="Remediation is not the same as resolution." description="All four canonical recovery checks remain pending after rollback. Their server-derived execution is intentionally deferred to PASS 12." />
+           <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+               <GuidedValidationChecks />
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/components/guided-controller.tsx ./components/guided-controller.tsx
+--- /mnt/data/applicationops-candidate-demo-pass10/components/guided-controller.tsx	2026-09-03 09:20:24.249027031 +0000
++++ ./components/guided-controller.tsx	2026-09-03 09:51:14.298082241 +0000
+@@ -7,7 +7,41 @@
+   const { step, busy, hydrating, error, runPrimaryAction, resetDemo, incident } = useGuidedWorkflow();
+   const definition = guidedStepDefinition(step);
+   const completed = step === 6;
+-  const decisionRecorded = step === 3 && incident?.status === "REMEDIATION_SELECTED";
++  const decisionRecorded = step === 3 && incident?.status === "REMEDIATION_SELECTED" && incident.selectedRemediation === "ROLLBACK_RELEASE";
++  const rollbackComplete = incident?.status === "READY_FOR_VALIDATION";
++  const rollbackExecuting = incident?.status === "ROLLING_BACK";
++
++  const title = completed
++    ? "Incident resolved with the validation gate satisfied."
++    : rollbackComplete
++      ? "Controlled rollback completed and the recovery state is persisted."
++      : rollbackExecuting
++        ? "Controlled rollback is executing."
++        : decisionRecorded
++          ? "Remediation decision recorded. Execute the rollback as a separate controlled action."
++          : definition?.title;
++
++  const description = completed
++    ? "Reset the synthetic scenario to replay the walkthrough."
++    : rollbackComplete
++      ? "Review the before/after recovery evidence. Validation remains intentionally blocked until PASS 12."
++      : rollbackExecuting
++        ? "The persisted release and application state are being changed atomically."
++        : decisionRecorded
++          ? "The guarded backend will restore the known-good synthetic release and write recovery evidence in one transaction."
++          : definition?.description;
++
++  const actionLabel = busy
++    ? "WORKING…"
++    : completed
++      ? "RESET DEMO ↻"
++      : rollbackComplete
++        ? "ROLLBACK COMPLETE"
++        : rollbackExecuting
++          ? "ROLLBACK IN PROGRESS"
++          : decisionRecorded
++            ? "EXECUTE CONTROLLED ROLLBACK"
++            : definition?.actionLabel;
+ 
+   return (
+     <aside
+@@ -20,24 +54,10 @@
+             <span className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+               {completed ? "Complete" : `Step ${step} of 5`}
+             </span>
+-            {incident?.status ? (
+-              <span className="font-mono text-[11px] text-slate-400">{incident.status}</span>
+-            ) : null}
++            {incident?.status ? <span className="font-mono text-[11px] text-slate-400">{incident.status}</span> : null}
+           </div>
+-          <p className="mt-1 truncate text-sm font-semibold text-white">
+-            {completed
+-              ? "Incident resolved with the validation gate satisfied."
+-              : decisionRecorded
+-                ? "Remediation decision recorded. Recovery remains a separate controlled action."
+-                : definition?.title}
+-          </p>
+-          <p className="mt-0.5 hidden max-w-3xl text-xs text-slate-400 sm:block">
+-            {completed
+-              ? "Reset the synthetic scenario to replay the walkthrough."
+-              : decisionRecorded
+-                ? "The selected rollback is persisted; this pass intentionally does not execute it."
+-                : definition?.description}
+-          </p>
++          <p className="mt-1 truncate text-sm font-semibold text-white">{title}</p>
++          <p className="mt-0.5 hidden max-w-3xl text-xs text-slate-400 sm:block">{description}</p>
+           <div className="mt-1 min-h-4" aria-live="polite">
+             {error ? <p className="text-xs text-rose-300">{error}</p> : hydrating ? <p className="text-xs text-slate-400">Loading persisted workflow state…</p> : null}
+           </div>
+@@ -46,10 +66,10 @@
+         <button
+           type="button"
+           onClick={completed ? () => void resetDemo() : () => void runPrimaryAction()}
+-          disabled={busy || hydrating || decisionRecorded}
++          disabled={busy || hydrating || rollbackComplete || rollbackExecuting}
+           className="shrink-0 rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold tracking-[0.01em] text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+         >
+-          {busy ? "WORKING…" : completed ? "RESET DEMO ↻" : decisionRecorded ? "DECISION RECORDED" : definition?.actionLabel}
++          {actionLabel}
+         </button>
+       </div>
+     </aside>
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/components/guided-nav.tsx ./components/guided-nav.tsx
+--- /mnt/data/applicationops-candidate-demo-pass10/components/guided-nav.tsx	2026-09-03 08:26:50.300458739 +0000
++++ ./components/guided-nav.tsx	2026-09-03 09:51:14.298267164 +0000
+@@ -7,6 +7,7 @@
+   { href: "#release-evidence", label: "Release", step: 2 },
+   { href: "#diagnostics", label: "Diagnostics", step: 2 },
+   { href: "#remediation", label: "Remediation", step: 3 },
++  { href: "#rollback-recovery", label: "Recovery", step: 3 },
+   { href: "#validation", label: "Validation", step: 4 },
+   { href: "#resolution", label: "Resolution", step: 5 },
+   { href: "#audit", label: "Audit", step: 1 }
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/components/guided-workflow-provider.tsx ./components/guided-workflow-provider.tsx
+--- /mnt/data/applicationops-candidate-demo-pass10/components/guided-workflow-provider.tsx	2026-09-03 09:20:24.248309637 +0000
++++ ./components/guided-workflow-provider.tsx	2026-09-03 09:54:11.395830730 +0000
+@@ -11,7 +11,7 @@
+ } from "react";
+ 
+ import { SCENARIO } from "@/lib/data/synthetic-scenario";
+-import type { IncidentStatus, RemediationAction, ValidationStatus } from "@/lib/domain/types";
++import type { IncidentStatus, ReleaseStatus, RemediationAction, ValidationStatus } from "@/lib/domain/types";
+ import {
+   guidedStepDefinition,
+   guidedStepFromIncidentStatus,
+@@ -39,6 +39,26 @@
+   };
+ }
+ 
++
++export interface GuidedReleaseView {
++  id: string;
++  version: string;
++  status: ReleaseStatus;
++  downstreamTimeoutMs: number;
++  syntheticErrorRate: number;
++  deployedAt: string | null;
++}
++
++export interface GuidedReleasesView {
++  previous: GuidedReleaseView;
++  current: GuidedReleaseView;
++  activeReleaseVersion: string;
++  diff: {
++    downstreamTimeoutMs: { previous: number; current: number };
++    syntheticErrorRate: { previous: number; current: number };
++  };
++}
++
+ export interface GuidedValidationView {
+   id: string;
+   key: string;
+@@ -90,6 +110,7 @@
+ interface GuidedWorkflowContextValue {
+   incident: GuidedIncidentView | null;
+   validation: GuidedValidationView[];
++  releases: GuidedReleasesView | null;
+   audit: GuidedAuditView[];
+   logs: GuidedDiagnosticLogView[];
+   requests: GuidedRequestView[];
+@@ -136,6 +157,7 @@
+ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
+   const [incident, setIncident] = useState<GuidedIncidentView | null>(null);
+   const [validation, setValidation] = useState<GuidedValidationView[]>([]);
++  const [releases, setReleases] = useState<GuidedReleasesView | null>(null);
+   const [audit, setAudit] = useState<GuidedAuditView[]>([]);
+   const [logs, setLogs] = useState<GuidedDiagnosticLogView[]>([]);
+   const [requests, setRequests] = useState<GuidedRequestView[]>([]);
+@@ -145,9 +167,10 @@
+   const [error, setError] = useState<string | null>(null);
+ 
+   const refresh = useCallback(async () => {
+-    const [nextIncident, nextValidation, nextAudit, nextLogs, nextRequests, nextTransactions] = await Promise.all([
++    const [nextIncident, nextValidation, nextReleases, nextAudit, nextLogs, nextRequests, nextTransactions] = await Promise.all([
+       apiRequest<GuidedIncidentView>(`/api/incidents/${SCENARIO.incidentId}`),
+       apiRequest<GuidedValidationView[]>(`/api/incidents/${SCENARIO.incidentId}/validation`),
++      apiRequest<GuidedReleasesView>(`/api/incidents/${SCENARIO.incidentId}/releases`),
+       apiRequest<GuidedAuditView[]>(`/api/incidents/${SCENARIO.incidentId}/audit`),
+       apiRequest<GuidedDiagnosticLogView[]>(`/api/incidents/${SCENARIO.incidentId}/logs`),
+       apiRequest<GuidedRequestView[]>(`/api/incidents/${SCENARIO.incidentId}/requests`),
+@@ -155,6 +178,7 @@
+     ]);
+     setIncident(nextIncident);
+     setValidation(nextValidation);
++    setReleases(nextReleases);
+     setAudit(nextAudit);
+     setLogs(nextLogs);
+     setRequests(nextRequests);
+@@ -202,11 +226,16 @@
+           await apiRequest(`/api/incidents/${SCENARIO.incidentId}/confirm-regression`, { method: "POST" });
+           break;
+         case 3:
+-          scrollToGuidedTarget("remediation");
+-          return;
+-        case 4:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
++          if (incident?.status !== "REMEDIATION_SELECTED" || incident.selectedRemediation !== "ROLLBACK_RELEASE") {
++            scrollToGuidedTarget("remediation");
++            return;
++          }
++          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/rollback`, { method: "POST" });
+           break;
++        case 4:
++          // PASS 11 stops after persisted rollback + recovery. Validation is deliberately held for PASS 12.
++          scrollToGuidedTarget("validation");
++          return;
+         case 5:
+           await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
+           break;
+@@ -224,7 +253,7 @@
+     } finally {
+       setBusy(false);
+     }
+-  }, [busy, hydrating, incident?.status, refresh, step]);
++  }, [busy, hydrating, incident?.status, incident?.selectedRemediation, refresh, step]);
+ 
+   const submitRemediationDecision = useCallback(async (action: RemediationAction) => {
+     if (busy || hydrating) return;
+@@ -270,8 +299,8 @@
+   }, [busy, refresh]);
+ 
+   const value = useMemo<GuidedWorkflowContextValue>(
+-    () => ({ incident, validation, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh }),
+-    [incident, validation, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh]
++    () => ({ incident, validation, releases, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh }),
++    [incident, validation, releases, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh]
+   );
+ 
+   return <GuidedWorkflowContext.Provider value={value}>{children}</GuidedWorkflowContext.Provider>;
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/components/remediation-decision.tsx ./components/remediation-decision.tsx
+--- /mnt/data/applicationops-candidate-demo-pass10/components/remediation-decision.tsx	2026-09-03 09:21:53.569869589 +0000
++++ ./components/remediation-decision.tsx	2026-09-03 09:51:14.298483712 +0000
+@@ -52,17 +52,18 @@
+   }
+ 
+   if (mode === "RECORDED") {
++    const executed = incident?.status === "ROLLING_BACK" || incident?.status === "READY_FOR_VALIDATION" || incident?.status === "VALIDATED" || incident?.status === "RESOLVED";
+     return (
+       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+         <div className="rounded-2xl border border-sky-400/25 bg-sky-400/[0.05] p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Decision recorded</p>
+           <p className="mt-2 text-xl font-semibold text-white">Rollback release</p>
+-          <p className="mt-3 text-sm leading-6 text-slate-300">The guarded backend persisted <span className="font-mono text-sky-200">ROLLBACK_RELEASE</span> after the release regression was confirmed. Recovery execution remains a separate controlled action.</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">The guarded backend persisted <span className="font-mono text-sky-200">ROLLBACK_RELEASE</span> after the release regression was confirmed. {executed ? "The decision remains visible after execution for traceability." : "Recovery execution remains a separate controlled action."}</p>
+         </div>
+         <aside className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Why this decision fits</p>
+           <p className="mt-3 text-sm leading-6 text-slate-300">The previous release is stable, the confirmed regression is release-level, and rollback is reversible for this synthetic scenario.</p>
+-          <p className="mt-3 text-xs leading-5 text-slate-400">No rollback is executed in this decision pass.</p>
++          <p className="mt-3 text-xs leading-5 text-slate-400">{executed ? "Review the controlled rollback and persisted recovery evidence in the next section." : "The rollback has not executed yet; use the guided controller when ready."}</p>
+         </aside>
+       </div>
+     );
+Only in ./components: rollback-recovery.tsx
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/lib/ui/guided-workflow.ts ./lib/ui/guided-workflow.ts
+--- /mnt/data/applicationops-candidate-demo-pass10/lib/ui/guided-workflow.ts	2026-09-03 09:20:24.248705377 +0000
++++ ./lib/ui/guided-workflow.ts	2026-09-03 09:51:14.298166830 +0000
+@@ -89,7 +89,7 @@
+     case 2:
+       return "root-cause-evidence";
+     case 3:
+-      return "remediation";
++      return "rollback-recovery";
+     case 4:
+       return "resolution";
+     case 5:
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/lib/ui/remediation-decision.ts ./lib/ui/remediation-decision.ts
+--- /mnt/data/applicationops-candidate-demo-pass10/lib/ui/remediation-decision.ts	2026-09-03 09:19:58.557813622 +0000
++++ ./lib/ui/remediation-decision.ts	2026-09-03 09:51:14.298362681 +0000
+@@ -57,7 +57,10 @@
+   rootCauseCode: string | null;
+   selectedRemediation: string | null;
+ }): RemediationDecisionMode {
+-  if (input.status === "REMEDIATION_SELECTED" && input.selectedRemediation === "ROLLBACK_RELEASE") {
++  if (
++    ["REMEDIATION_SELECTED", "ROLLING_BACK", "READY_FOR_VALIDATION", "VALIDATED", "RESOLVED"].includes(input.status) &&
++    input.selectedRemediation === "ROLLBACK_RELEASE"
++  ) {
+     return "RECORDED";
+   }
+ 
+Only in ./lib/ui: rollback-recovery.ts
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/package.json ./package.json
+--- /mnt/data/applicationops-candidate-demo-pass10/package.json	2026-09-03 09:20:41.573236216 +0000
++++ ./package.json	2026-09-03 09:51:14.299377810 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "applicationops-candidate-demo",
+-  "version": "0.10.0",
++  "version": "0.11.0",
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+@@ -26,7 +26,8 @@
+     "pass7:gate": "python3 scripts/pass7_guided_interaction_gate.py",
+     "pass8:gate": "python3 scripts/pass8_release_evidence_gate.py",
+     "pass9:gate": "python3 scripts/pass9_diagnostic_correlation_gate.py",
+-    "pass10:gate": "python3 scripts/pass10_remediation_decision_gate.py"
++    "pass10:gate": "python3 scripts/pass10_remediation_decision_gate.py",
++    "pass11:gate": "python3 scripts/pass11_rollback_recovery_gate.py"
+   },
+   "dependencies": {
+     "@prisma/client": "6.19.0",
+Only in ./scripts: pass11_rollback_recovery_gate.py
+Only in ./scripts: pass11_rollback_recovery_smoke.ts
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/tests/unit/guided-workflow.test.ts ./tests/unit/guided-workflow.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass10/tests/unit/guided-workflow.test.ts	2026-09-03 09:20:41.573056971 +0000
++++ ./tests/unit/guided-workflow.test.ts	2026-09-03 09:51:14.299077260 +0000
+@@ -36,7 +36,7 @@
+   it("scrolls to the next unlocked evidence section", () => {
+     expect(nextGuidedTargetAfterAction(1)).toBe("release-evidence");
+     expect(nextGuidedTargetAfterAction(2)).toBe("root-cause-evidence");
+-    expect(nextGuidedTargetAfterAction(3)).toBe("remediation");
++    expect(nextGuidedTargetAfterAction(3)).toBe("rollback-recovery");
+     expect(nextGuidedTargetAfterAction(4)).toBe("resolution");
+     expect(nextGuidedTargetAfterAction(5)).toBe("audit");
+   });
+diff -ru '--exclude=PASS_*' '--exclude=SHA256.txt' /mnt/data/applicationops-candidate-demo-pass10/tests/unit/remediation-decision.test.ts ./tests/unit/remediation-decision.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass10/tests/unit/remediation-decision.test.ts	2026-09-03 09:21:01.556121984 +0000
++++ ./tests/unit/remediation-decision.test.ts	2026-09-03 09:51:14.299171187 +0000
+@@ -65,14 +65,16 @@
+     expect(canRecordRemediationDecision({ mode: "LOCKED", action: "ROLLBACK_RELEASE" })).toBe(false);
+   });
+ 
+-  it("moves to recorded mode only after rollback is persisted", () => {
+-    expect(
+-      remediationDecisionMode({
+-        status: "REMEDIATION_SELECTED",
+-        rootCauseCode: "RELEASE_TIMEOUT_REGRESSION",
+-        selectedRemediation: "ROLLBACK_RELEASE"
+-      })
+-    ).toBe("RECORDED");
++  it("keeps the recorded decision visible through rollback and recovery", () => {
++    for (const status of ["REMEDIATION_SELECTED", "ROLLING_BACK", "READY_FOR_VALIDATION", "VALIDATED", "RESOLVED"] as const) {
++      expect(
++        remediationDecisionMode({
++          status,
++          rootCauseCode: "RELEASE_TIMEOUT_REGRESSION",
++          selectedRemediation: "ROLLBACK_RELEASE"
++        })
++      ).toBe("RECORDED");
++    }
+   });
+ 
+   it("uses neutral evidence-fit language rather than claiming universal safety", () => {
+Only in ./tests/unit: rollback-recovery.test.ts

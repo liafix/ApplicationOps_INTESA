@@ -1,0 +1,1 @@
+4705abb4ef1ebd5aacc7491a96ccf1a131f4236bd66053bc32f53838dcdd02bb  applicationops-candidate-demo-pass10.zip

@@ -1,0 +1,36 @@
+PASS 10 code scope relative to PASS 9
+
+ADDED
+components/remediation-decision.tsx
+lib/ui/remediation-decision.ts
+tests/unit/remediation-decision.test.ts
+scripts/pass10_remediation_decision_gate.py
+scripts/pass10_remediation_decision_smoke.ts
+PASS_10_REPORT.md
+PASS_10_GATE_OUTPUT.txt
+PASS_10_REMEDIATION_SMOKE_OUTPUT.txt
+PASS_10_REMEDIATION_TS_COMPILE_OUTPUT.txt
+PASS_10_UI_TS_COMPILE_OUTPUT.txt
+PASS_10_SECRET_SCAN_OUTPUT.txt
+
+CHANGED
+app/page.tsx
+components/guided-workflow-provider.tsx
+components/guided-controller.tsx
+lib/ui/guided-workflow.ts
+tests/unit/guided-workflow.test.ts
+package.json
+README.md
+
+UNCHANGED BY PASS 10
+lib/domain/*
+lib/services/applicationops-service.ts
+app/api/incidents/[id]/rollback/route.ts
+app/api/incidents/[id]/remediation/route.ts
+Prisma schema/migrations
+PASS 8 root-cause evidence implementation
+PASS 9 diagnostic-correlation implementation
+
+PASS 11 FREEZE
+No new rollback/recovery component, helper, unit test, or gate script.
+PASS 10 UI does not call /rollback.

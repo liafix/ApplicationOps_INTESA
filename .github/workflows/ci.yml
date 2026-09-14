@@ -1,0 +1,107 @@
+name: Engineering CI (manual / dependency-backed)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: applicationops-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  NEXT_PUBLIC_APPLICATIONOPS_RUNTIME: "presentation"
+
+jobs:
+  quality:
+    name: Quality / Build / Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Repository gate
+        run: npm run pass15:gate
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Prisma client + schema validation
+        run: |
+          npm run prisma:generate
+          DATABASE_URL="postgresql://applicationops:applicationops@127.0.0.1:5432/applicationops?schema=public" npm run prisma:validate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Presentation production build
+        env:
+          DATABASE_URL: postgresql://applicationops:applicationops@127.0.0.1:5432/applicationops?schema=public
+        run: npm run build
+
+      - name: Dependency security audit
+        run: npm run security:audit
+
+  postgres-integration:
+    name: PostgreSQL Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: applicationops
+          POSTGRES_PASSWORD: applicationops
+          POSTGRES_DB: applicationops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U applicationops -d applicationops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://applicationops:applicationops@127.0.0.1:5432/applicationops?schema=public
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Prisma generate + validate
+        run: |
+          npm run prisma:generate
+          npm run prisma:validate
+
+      - name: Apply committed migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: PostgreSQL golden + negative paths
+        run: npm run test:integration:db

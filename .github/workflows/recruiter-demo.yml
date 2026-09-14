@@ -1,0 +1,54 @@
+name: Recruiter Demo CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recruiter-demo-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Zero-dependency demo / tests / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+
+      - name: JavaScript syntax
+        run: |
+          node --check recruiter-demo/app.js
+          node --check recruiter-demo/state.mjs
+          node --check scripts/build-recruiter-demo.mjs
+          node --check scripts/validate-recruiter-demo.mjs
+
+      - name: State-machine tests
+        run: node --test tests/recruiter-demo/state.test.mjs
+
+      - name: Static release validation
+        run: node scripts/validate-recruiter-demo.mjs
+
+      - name: Build recruiter demo
+        run: node scripts/build-recruiter-demo.mjs
+
+      - name: Secret scan
+        run: python3 scripts/pass15_secret_scan.py --root .
+
+      - name: Upload built demo
+        uses: actions/upload-artifact@v4
+        with:
+          name: applicationops-recruiter-demo
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

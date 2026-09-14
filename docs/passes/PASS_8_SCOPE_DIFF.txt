@@ -1,0 +1,16 @@
+Only in /mnt/data/applicationops-candidate-demo-pass8: PASS_8_EVIDENCE_SMOKE_OUTPUT.txt
+Only in /mnt/data/applicationops-candidate-demo-pass8: PASS_8_GATE_OUTPUT.txt
+Only in /mnt/data/applicationops-candidate-demo-pass8: PASS_8_REPORT.md
+Only in /mnt/data/applicationops-candidate-demo-pass8: PASS_8_SCOPE_DIFF.txt
+Only in /mnt/data/applicationops-candidate-demo-pass8: PASS_8_UI_TS_COMPILE_OUTPUT.txt
+Files /mnt/data/applicationops-candidate-demo-pass7/README.md and /mnt/data/applicationops-candidate-demo-pass8/README.md differ
+Files /mnt/data/applicationops-candidate-demo-pass7/app/page.tsx and /mnt/data/applicationops-candidate-demo-pass8/app/page.tsx differ
+Files /mnt/data/applicationops-candidate-demo-pass7/components/guided-workflow-provider.tsx and /mnt/data/applicationops-candidate-demo-pass8/components/guided-workflow-provider.tsx differ
+Only in /mnt/data/applicationops-candidate-demo-pass8/components: release-comparison.tsx
+Only in /mnt/data/applicationops-candidate-demo-pass8/components: root-cause-evidence.tsx
+Files /mnt/data/applicationops-candidate-demo-pass7/lib/ui/guided-workflow.ts and /mnt/data/applicationops-candidate-demo-pass8/lib/ui/guided-workflow.ts differ
+Only in /mnt/data/applicationops-candidate-demo-pass8/lib/ui: release-evidence.ts
+Files /mnt/data/applicationops-candidate-demo-pass7/package.json and /mnt/data/applicationops-candidate-demo-pass8/package.json differ
+Only in /mnt/data/applicationops-candidate-demo-pass8/scripts: pass8_release_evidence_gate.py
+Files /mnt/data/applicationops-candidate-demo-pass7/tests/unit/guided-workflow.test.ts and /mnt/data/applicationops-candidate-demo-pass8/tests/unit/guided-workflow.test.ts differ
+Only in /mnt/data/applicationops-candidate-demo-pass8/tests/unit: release-evidence.test.ts

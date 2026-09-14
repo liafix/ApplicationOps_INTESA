@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.vercel/
+.DS_Store
+
+# Local CI / audit artifacts
+PASS_*_OUTPUT.txt
+*.sha256.txt

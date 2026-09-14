@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  REGRESSION_CONFIRMED
+  REMEDIATION_SELECTED
+  ROLLING_BACK
+  READY_FOR_VALIDATION
+  VALIDATED
+  RESOLVED
+}
+
+enum ReleaseStatus {
+  STABLE
+  DEPLOYED
+  DEGRADED
+  ROLLING_BACK
+  ROLLED_BACK
+}
+
+enum RemediationAction {
+  RETRY_FAILED_TRANSACTIONS
+  CHANGE_PRODUCTION_DATA
+  ROLLBACK_RELEASE
+  ESCALATE_WITHOUT_ACTION
+}
+
+enum ValidationStatus {
+  PENDING
+  PASS
+  FAIL
+}
+
+enum ServiceHealth {
+  HEALTHY
+  DEGRADED
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+enum SyntheticTransactionStatus {
+  FAILED
+  SUCCEEDED
+}
+
+model Application {
+  id                   String        @id
+  name                 String
+  environment          String
+  serviceHealth        ServiceHealth
+  activeReleaseVersion String
+  syntheticErrorRate   Float
+  createdAt            DateTime
+  updatedAt            DateTime
+
+  releases             Release[]
+  incidents            Incident[]
+
+  @@index([serviceHealth])
+}
+
+model Release {
+  id                  String        @id
+  applicationId       String
+  version             String
+  status              ReleaseStatus
+  downstreamTimeoutMs Int
+  syntheticErrorRate  Float
+  deployedAt          DateTime?
+  createdAt           DateTime
+
+  application         Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, version])
+  @@index([applicationId, status])
+  @@index([applicationId, deployedAt])
+}
+
+model Incident {
+  id                   String             @id
+  applicationId        String
+  title                String
+  severity             String
+  status               IncidentStatus
+  requestSummary       String
+  technicalSummary     String?
+  closureTechnicalSummary String?
+  closureBusinessSummary  String?
+  rootCauseCode        String?
+  selectedRemediation  RemediationAction?
+  affectedRelease      String
+  recoveredRelease     String?
+  createdAt            DateTime
+  updatedAt            DateTime
+
+  application          Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  logs                 DiagnosticLog[]
+  requests             ApiRequest[]
+  transactions         SyntheticTransaction[]
+  validationChecks     ValidationCheck[]
+  auditEvents          AuditEvent[]
+
+  @@index([applicationId, status])
+  @@index([severity, createdAt])
+  @@index([createdAt])
+}
+
+model DiagnosticLog {
+  id          String    @id
+  incidentId  String
+  timestamp   DateTime
+  level       LogLevel
+  requestId   String?
+  service     String
+  message     String
+
+  incident    Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, timestamp])
+  @@index([requestId])
+  @@index([level, timestamp])
+}
+
+model ApiRequest {
+  id             String    @id
+  incidentId     String
+  requestId      String
+  method         String
+  path           String
+  responseStatus Int
+  durationMs     Int
+  releaseVersion String
+  failureCode    String?
+  createdAt      DateTime
+
+  incident       Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+  @@index([requestId])
+  @@index([responseStatus, createdAt])
+}
+
+model SyntheticTransaction {
+  id                 String                     @id
+  incidentId         String
+  requestId          String
+  status             SyntheticTransactionStatus
+  applicationVersion String
+  failureCode        String?
+  createdAt          DateTime
+
+  incident           Incident                   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+  @@index([requestId])
+  @@index([status, createdAt])
+}
+
+model ValidationCheck {
+  id          String           @id
+  incidentId  String
+  key         String
+  label       String
+  required    Boolean          @default(true)
+  status      ValidationStatus
+
+  incident    Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, key])
+  @@index([incidentId, status])
+}
+
+model AuditEvent {
+  id          String    @id
+  incidentId  String
+  type        String
+  actor       String
+  metadata    Json?
+  timestamp   DateTime
+
+  incident    Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, timestamp])
+  @@index([type, timestamp])
+}

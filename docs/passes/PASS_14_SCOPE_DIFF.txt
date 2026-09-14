@@ -1,0 +1,1960 @@
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/.env.example /mnt/data/applicationops-candidate-demo-pass14/.env.example
+--- /mnt/data/applicationops-candidate-demo-pass13/.env.example	2026-09-02 09:22:53.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/.env.example	2026-09-03 10:35:08.160304376 +0000
+@@ -1,3 +1,6 @@
+-# Local PostgreSQL example for the full repository implementation.
+-# The future recruiter-facing Presentation Mode will not require this database at runtime.
+-DATABASE_URL="postgresql://applicationops:applicationops@localhost:5432/applicationops?schema=public"
++# Recruiter live demo mode is the default and requires no PostgreSQL connection.
++# NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="presentation"
++
++# Optional database-backed technical-review mode:
++# NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="server"
++# DATABASE_URL="postgresql://applicationops:applicationops@localhost:5432/applicationops?schema=public"
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_GATE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_GATE_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_GATE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_GATE_OUTPUT.txt	2026-09-03 10:37:32.566991058 +0000
+@@ -0,0 +1,50 @@
++PASS presentation state module exists
++PASS presentation banner exists
++PASS presentation unit test exists
++PASS runtime defaults to presentation
++PASS server mode remains optional
++PASS presentation provider has no Prisma import
++PASS presentation state has no Prisma import
++PASS presentation state has no fetch
++PASS initial synthetic state factory
++PASS investigation transition
++PASS root cause transition
++PASS remediation transition
++PASS rollback start transition
++PASS rollback completion transition
++PASS validation transition
++PASS resolution transition
++PASS presentation remediation rejects unsupported
++PASS presentation rollback writes recovery request
++PASS presentation rollback writes recovery transaction
++PASS presentation recovery restores stable release
++PASS validation derives evidence
++PASS validation requires 4 of 4
++PASS resolution derives handoff
++PASS resolution creates technical summary
++PASS resolution creates business summary
++PASS presentation reset factory used
++PASS presentation primary path avoids API calls
++PASS presentation remediation path avoids API calls
++PASS presentation rollback shows intermediate state
++PASS presentation validation invokes local engine
++PASS presentation resolution invokes local engine
++PASS banner explicitly says browser state
++PASS banner explicitly says no PostgreSQL runtime
++PASS banner separates repository DB implementation
++PASS page renders presentation banner
++PASS env example documents presentation default
++PASS env example documents optional server mode
++PASS package version is pass14
++PASS package exposes pass14 gate
++PASS unit test covers full resolution
++PASS unit test covers reset determinism
++PASS candidate disclaimer retained
++PASS 5-step controller retained
++PASS PASS 15 script not created
++PASS PASS 15 report not created
++
++checks=45
++passed=45
++failed=0
++PASS14_PRESENTATION_MODE_GATE_PASS
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt	2026-09-03 10:35:59.095808441 +0000
+@@ -0,0 +1,5 @@
++PASS14_PRESENTATION_WORKFLOW_SMOKE_PASS
++steps=5
++final_status=RESOLVED
++validation=4/4
++postgres_runtime_required=false
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt	2026-09-03 10:35:43.259964369 +0000
+@@ -0,0 +1 @@
++PASS14_PRESENTATION_TYPESCRIPT_COMPILE_PASS
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_REPORT.md /mnt/data/applicationops-candidate-demo-pass14/PASS_14_REPORT.md
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_REPORT.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_REPORT.md	2026-09-03 10:37:17.135115296 +0000
+@@ -0,0 +1,140 @@
++# PASS 14 — Recruiter Presentation Mode
++
++## Verdict
++
++**IMPLEMENTED — PASS 14 COMPLETE / PASS 15 NOT STARTED**
++
++ApplicationOps now has a deterministic recruiter-facing runtime that completes the full five-step incident walkthrough without PostgreSQL, while the existing PASS 0–13 API/Prisma/PostgreSQL implementation remains in the repository for technical review.
++
++## Runtime contract
++
++Default:
++
++```text
++NEXT_PUBLIC_APPLICATIONOPS_RUNTIME unset
++→ presentation
++```
++
++Optional technical-review mode:
++
++```text
++NEXT_PUBLIC_APPLICATIONOPS_RUNTIME=server
++→ existing guarded API + Prisma/PostgreSQL path
++```
++
++The default live mode does not hydrate from `/api/*`, does not call Prisma, and does not require `DATABASE_URL`.
++
++## Presentation state engine
++
++Added:
++
++- `lib/presentation/presentation-state.ts`
++- `components/presentation-mode-banner.tsx`
++- `tests/unit/presentation-state.test.ts`
++
++The pure presentation engine owns only synthetic browser state. It contains no Prisma import, database URL, bank API integration or network fetch.
++
++### Deterministic sequence
++
++1. `presentationStartInvestigation()`
++   - `OPEN → INVESTIGATING`
++   - records `INVESTIGATION_STARTED`
++2. `presentationConfirmRegression()`
++   - runs the existing deterministic root-cause rules over the synthetic evidence
++   - records `RELEASE_TIMEOUT_REGRESSION`
++   - `INVESTIGATING → REGRESSION_CONFIRMED`
++3. `presentationRecordRemediation()`
++   - accepts only `ROLLBACK_RELEASE` as the successful path for this evidence set
++   - `REGRESSION_CONFIRMED → REMEDIATION_SELECTED`
++4. controlled rollback
++   - `REMEDIATION_SELECTED → ROLLING_BACK → READY_FOR_VALIDATION`
++   - v2.8.0 → `ROLLED_BACK`
++   - v2.7.4 → active `STABLE`
++   - service `DEGRADED → HEALTHY`
++   - synthetic error rate `14.8% → 1.1%`
++   - adds `req_tx_recovery`, HTTP 200, `TX-90843 SUCCEEDED` and recovery log
++5. validation
++   - reuses the existing recovery-evidence derivation
++   - requires 4/4 evidence conditions
++   - records four `PASS` checks
++   - `READY_FOR_VALIDATION → VALIDATED`
++6. resolution
++   - reuses the deterministic resolution-handoff derivation
++   - creates technical and business-facing closure summaries
++   - `VALIDATED → RESOLVED`
++7. reset
++   - rebuilds the exact canonical `OPEN` synthetic state
++
++The reviewer still experiences five user-facing checkpoints: Investigate → Compare → Decide/Recover → Validate → Resolve. Rollback remains a separate controlled action inside the remediation stage, consistent with PASS 10–13.
++
++## Transparency / credibility hardening
++
++The live UI now exposes a visible `Recruiter Presentation Mode` banner:
++
++> This live walkthrough uses deterministic synthetic state entirely in the browser, so it does not require PostgreSQL or access to any external bank system. The repository keeps the separate database-backed implementation and tests for technical review.
++
++This prevents a recruiter from mistaking the reliability layer for a live bank/backend connection.
++
++Presentation-aware copy was hardened so the browser mode no longer falsely claims that each live action was persisted to PostgreSQL or executed by a live server transaction. Database-backed wording remains available only where the optional server runtime is active.
++
++## Independence from PostgreSQL
++
++The default presentation path:
++
++- initializes from `createPresentationState()`;
++- does not call `refresh()` against API routes on mount;
++- does not call API mutation endpoints for the five-step flow;
++- does not import Prisma in the presentation module;
++- does not require `DATABASE_URL`;
++- reset is local and deterministic;
++- still uses the same synthetic IDs, evidence, guards, validation definitions and closure logic.
++
++The existing `/api/*`, Prisma schema, migrations and DB integration tests were not removed or weakened.
++
++## Verification
++
++### PASS 14 source/scope gate
++
++```text
++checks=45
++passed=45
++failed=0
++PASS14_PRESENTATION_MODE_GATE_PASS
++```
++
++### Executable presentation walkthrough
++
++```text
++PASS14_PRESENTATION_WORKFLOW_SMOKE_PASS
++steps=5
++final_status=RESOLVED
++validation=4/4
++postgres_runtime_required=false
++```
++
++### TypeScript
++
++```text
++PASS14_PRESENTATION_TYPESCRIPT_COMPILE_PASS
++PASS14_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
++```
++
++## Scope freeze
++
++PASS 15 was not started.
++
++Not performed in this pass:
++
++- `npm ci`
++- full Vitest suite
++- ESLint full gate
++- full project typecheck
++- Prisma generate/migrate against a real database
++- real PostgreSQL integration suite
++- Next production build
++- dependency audit
++- GitHub Actions hardening
++- public deployment
++- browser/mobile rendered QA
++
++Those remain explicit release gates.
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_SCOPE_DIFF.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_SCOPE_DIFF.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_SCOPE_DIFF.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_SCOPE_DIFF.txt	2026-09-03 10:38:00.970757238 +0000
+@@ -0,0 +1,225 @@
++diff -ruN /mnt/data/applicationops-candidate-demo-pass13/.env.example /mnt/data/applicationops-candidate-demo-pass14/.env.example
++--- /mnt/data/applicationops-candidate-demo-pass13/.env.example	2026-09-02 09:22:53.000000000 +0000
+++++ /mnt/data/applicationops-candidate-demo-pass14/.env.example	2026-09-03 10:35:08.160304376 +0000
++@@ -1,3 +1,6 @@
++-# Local PostgreSQL example for the full repository implementation.
++-# The future recruiter-facing Presentation Mode will not require this database at runtime.
++-DATABASE_URL="postgresql://applicationops:applicationops@localhost:5432/applicationops?schema=public"
+++# Recruiter live demo mode is the default and requires no PostgreSQL connection.
+++# NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="presentation"
+++
+++# Optional database-backed technical-review mode:
+++# NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="server"
+++# DATABASE_URL="postgresql://applicationops:applicationops@localhost:5432/applicationops?schema=public"
++diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_GATE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_GATE_OUTPUT.txt
++--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_GATE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_GATE_OUTPUT.txt	2026-09-03 10:37:32.566991058 +0000
++@@ -0,0 +1,50 @@
+++PASS presentation state module exists
+++PASS presentation banner exists
+++PASS presentation unit test exists
+++PASS runtime defaults to presentation
+++PASS server mode remains optional
+++PASS presentation provider has no Prisma import
+++PASS presentation state has no Prisma import
+++PASS presentation state has no fetch
+++PASS initial synthetic state factory
+++PASS investigation transition
+++PASS root cause transition
+++PASS remediation transition
+++PASS rollback start transition
+++PASS rollback completion transition
+++PASS validation transition
+++PASS resolution transition
+++PASS presentation remediation rejects unsupported
+++PASS presentation rollback writes recovery request
+++PASS presentation rollback writes recovery transaction
+++PASS presentation recovery restores stable release
+++PASS validation derives evidence
+++PASS validation requires 4 of 4
+++PASS resolution derives handoff
+++PASS resolution creates technical summary
+++PASS resolution creates business summary
+++PASS presentation reset factory used
+++PASS presentation primary path avoids API calls
+++PASS presentation remediation path avoids API calls
+++PASS presentation rollback shows intermediate state
+++PASS presentation validation invokes local engine
+++PASS presentation resolution invokes local engine
+++PASS banner explicitly says browser state
+++PASS banner explicitly says no PostgreSQL runtime
+++PASS banner separates repository DB implementation
+++PASS page renders presentation banner
+++PASS env example documents presentation default
+++PASS env example documents optional server mode
+++PASS package version is pass14
+++PASS package exposes pass14 gate
+++PASS unit test covers full resolution
+++PASS unit test covers reset determinism
+++PASS candidate disclaimer retained
+++PASS 5-step controller retained
+++PASS PASS 15 script not created
+++PASS PASS 15 report not created
+++
+++checks=45
+++passed=45
+++failed=0
+++PASS14_PRESENTATION_MODE_GATE_PASS
++diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt
++--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_SMOKE_OUTPUT.txt	2026-09-03 10:35:59.095808441 +0000
++@@ -0,0 +1,5 @@
+++PASS14_PRESENTATION_WORKFLOW_SMOKE_PASS
+++steps=5
+++final_status=RESOLVED
+++validation=4/4
+++postgres_runtime_required=false
++diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt
++--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_PRESENTATION_TS_COMPILE_OUTPUT.txt	2026-09-03 10:35:43.259964369 +0000
++@@ -0,0 +1 @@
+++PASS14_PRESENTATION_TYPESCRIPT_COMPILE_PASS
++diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_REPORT.md /mnt/data/applicationops-candidate-demo-pass14/PASS_14_REPORT.md
++--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_REPORT.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_REPORT.md	2026-09-03 10:37:17.135115296 +0000
++@@ -0,0 +1,140 @@
+++# PASS 14 — Recruiter Presentation Mode
+++
+++## Verdict
+++
+++**IMPLEMENTED — PASS 14 COMPLETE / PASS 15 NOT STARTED**
+++
+++ApplicationOps now has a deterministic recruiter-facing runtime that completes the full five-step incident walkthrough without PostgreSQL, while the existing PASS 0–13 API/Prisma/PostgreSQL implementation remains in the repository for technical review.
+++
+++## Runtime contract
+++
+++Default:
+++
+++```text
+++NEXT_PUBLIC_APPLICATIONOPS_RUNTIME unset
+++→ presentation
+++```
+++
+++Optional technical-review mode:
+++
+++```text
+++NEXT_PUBLIC_APPLICATIONOPS_RUNTIME=server
+++→ existing guarded API + Prisma/PostgreSQL path
+++```
+++
+++The default live mode does not hydrate from `/api/*`, does not call Prisma, and does not require `DATABASE_URL`.
+++
+++## Presentation state engine
+++
+++Added:
+++
+++- `lib/presentation/presentation-state.ts`
+++- `components/presentation-mode-banner.tsx`
+++- `tests/unit/presentation-state.test.ts`
+++
+++The pure presentation engine owns only synthetic browser state. It contains no Prisma import, database URL, bank API integration or network fetch.
+++
+++### Deterministic sequence
+++
+++1. `presentationStartInvestigation()`
+++   - `OPEN → INVESTIGATING`
+++   - records `INVESTIGATION_STARTED`
+++2. `presentationConfirmRegression()`
+++   - runs the existing deterministic root-cause rules over the synthetic evidence
+++   - records `RELEASE_TIMEOUT_REGRESSION`
+++   - `INVESTIGATING → REGRESSION_CONFIRMED`
+++3. `presentationRecordRemediation()`
+++   - accepts only `ROLLBACK_RELEASE` as the successful path for this evidence set
+++   - `REGRESSION_CONFIRMED → REMEDIATION_SELECTED`
+++4. controlled rollback
+++   - `REMEDIATION_SELECTED → ROLLING_BACK → READY_FOR_VALIDATION`
+++   - v2.8.0 → `ROLLED_BACK`
+++   - v2.7.4 → active `STABLE`
+++   - service `DEGRADED → HEALTHY`
+++   - synthetic error rate `14.8% → 1.1%`
+++   - adds `req_tx_recovery`, HTTP 200, `TX-90843 SUCCEEDED` and recovery log
+++5. validation
+++   - reuses the existing recovery-evidence derivation
+++   - requires 4/4 evidence conditions
+++   - records four `PASS` checks
+++   - `READY_FOR_VALIDATION → VALIDATED`
+++6. resolution
+++   - reuses the deterministic resolution-handoff derivation
+++   - creates technical and business-facing closure summaries
+++   - `VALIDATED → RESOLVED`
+++7. reset
+++   - rebuilds the exact canonical `OPEN` synthetic state
+++
+++The reviewer still experiences five user-facing checkpoints: Investigate → Compare → Decide/Recover → Validate → Resolve. Rollback remains a separate controlled action inside the remediation stage, consistent with PASS 10–13.
+++
+++## Transparency / credibility hardening
+++
+++The live UI now exposes a visible `Recruiter Presentation Mode` banner:
+++
+++> This live walkthrough uses deterministic synthetic state entirely in the browser, so it does not require PostgreSQL or access to any external bank system. The repository keeps the separate database-backed implementation and tests for technical review.
+++
+++This prevents a recruiter from mistaking the reliability layer for a live bank/backend connection.
+++
+++Presentation-aware copy was hardened so the browser mode no longer falsely claims that each live action was persisted to PostgreSQL or executed by a live server transaction. Database-backed wording remains available only where the optional server runtime is active.
+++
+++## Independence from PostgreSQL
+++
+++The default presentation path:
+++
+++- initializes from `createPresentationState()`;
+++- does not call `refresh()` against API routes on mount;
+++- does not call API mutation endpoints for the five-step flow;
+++- does not import Prisma in the presentation module;
+++- does not require `DATABASE_URL`;
+++- reset is local and deterministic;
+++- still uses the same synthetic IDs, evidence, guards, validation definitions and closure logic.
+++
+++The existing `/api/*`, Prisma schema, migrations and DB integration tests were not removed or weakened.
+++
+++## Verification
+++
+++### PASS 14 source/scope gate
+++
+++```text
+++checks=45
+++passed=45
+++failed=0
+++PASS14_PRESENTATION_MODE_GATE_PASS
+++```
+++
+++### Executable presentation walkthrough
+++
+++```text
+++PASS14_PRESENTATION_WORKFLOW_SMOKE_PASS
+++steps=5
+++final_status=RESOLVED
+++validation=4/4
+++postgres_runtime_required=false
+++```
+++
+++### TypeScript
+++
+++```text
+++PASS14_PRESENTATION_TYPESCRIPT_COMPILE_PASS
+++PASS14_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
+++```
+++
+++## Scope freeze
+++
+++PASS 15 was not started.
+++
+++Not performed in this pass:
+++
+++- `npm ci`
+++- full Vitest suite
+++- ESLint full gate
+++- full project typecheck
+++- Prisma generate/migrate against a real database
+++- real PostgreSQL integration suite
+++- Next production build
+++- dependency audit
+++- GitHub Actions hardening
+++- public deployment
+++- browser/mobile rendered QA
+++
+++Those remain explicit release gates.
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_SECRET_SCAN_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_SECRET_SCAN_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_SECRET_SCAN_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_SECRET_SCAN_OUTPUT.txt	2026-09-03 10:37:44.118896047 +0000
+@@ -0,0 +1,2 @@
++PASS14_SECRET_PATTERN_SCAN_PASS
++files_scanned=102
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_TEST_TS_COMPILE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_TEST_TS_COMPILE_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_TEST_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_TEST_TS_COMPILE_OUTPUT.txt	2026-09-03 10:37:30.327009419 +0000
+@@ -0,0 +1 @@
++PASS14_TEST_SOURCE_TYPESCRIPT_SHIM_COMPILE_PASS
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/PASS_14_UI_TS_COMPILE_OUTPUT.txt /mnt/data/applicationops-candidate-demo-pass14/PASS_14_UI_TS_COMPILE_OUTPUT.txt
+--- /mnt/data/applicationops-candidate-demo-pass13/PASS_14_UI_TS_COMPILE_OUTPUT.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/PASS_14_UI_TS_COMPILE_OUTPUT.txt	2026-09-03 10:37:31.690998226 +0000
+@@ -0,0 +1 @@
++PASS14_UI_SELECTED_TYPESCRIPT_SHIM_COMPILE_PASS
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/README.md /mnt/data/applicationops-candidate-demo-pass14/README.md
+--- /mnt/data/applicationops-candidate-demo-pass13/README.md	2026-09-03 10:29:40.211782649 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/README.md	2026-09-03 10:38:00.833760349 +0000
+@@ -8,6 +8,13 @@
+ 
+ ApplicationOps is designed around one deterministic synthetic application-support scenario: a release introduces a timeout regression, transaction processing degrades, evidence is correlated, a controlled reversible rollback is selected, recovery is validated and the incident is resolved.
+ 
++## Current runtime modes
++
++- **Recruiter Presentation Mode (default):** deterministic synthetic browser state; no PostgreSQL or external bank-system dependency at runtime.
++- **Database-backed technical-review mode (optional):** set `NEXT_PUBLIC_APPLICATIONOPS_RUNTIME=server` and provide `DATABASE_URL` to use the guarded API + Prisma/PostgreSQL implementation.
++
++The UI visibly discloses Presentation Mode so the live reliability layer is not mistaken for an Intesa internal or production system.
++
+ ## Current implementation status
+ 
+ ### PASS 0 — Foundation ✅
+@@ -254,3 +261,76 @@
+ ### Next phase
+ 
+ PASS 14 — Recruiter Presentation Mode. Preserve the real repository implementation while providing a deterministic public walkthrough that does not depend on live database availability.
++
++## PASS 14 — Recruiter Presentation Mode ✅
++
++PASS 14 adds a recruiter-safe live runtime that is **independent of PostgreSQL** while preserving the database-backed implementation for technical review.
++
++### Default live runtime
++
++If `NEXT_PUBLIC_APPLICATIONOPS_RUNTIME` is unset, ApplicationOps runs in:
++
++```text
++presentation
++```
++
++The five-step walkthrough uses deterministic synthetic React/browser state only. Initial page load, investigation, evidence evaluation, remediation selection, controlled rollback, recovery validation, resolution and reset do **not** call the API or require `DATABASE_URL`.
++
++The live UI displays an explicit **Recruiter Presentation Mode** disclosure so the reliability mechanism is transparent rather than pretending that browser state is a production backend.
++
++### Optional database-backed runtime
++
++For technical review of the real API/Prisma implementation:
++
++```bash
++NEXT_PUBLIC_APPLICATIONOPS_RUNTIME=server
++DATABASE_URL=postgresql://...
++npm run dev
++```
++
++In that mode the existing guarded API, Prisma transactions, migrations and PostgreSQL evidence model remain available exactly as implemented in PASS 0–13.
++
++### Presentation-mode workflow
++
++The browser presentation engine preserves the same five-stage reasoning path:
++
++```text
++OPEN
++→ INVESTIGATING
++→ REGRESSION_CONFIRMED
++→ REMEDIATION_SELECTED
++→ ROLLING_BACK
++→ READY_FOR_VALIDATION
++→ VALIDATED
++→ RESOLVED
++```
++
++It also preserves the same synthetic correlation set:
++
++```text
++v2.8.0
++→ req_tx_8f31
++→ UPSTREAM_TIMEOUT / HTTP 504
++→ TX-90842 FAILED
++→ rollback to v2.7.4
++→ req_tx_recovery / HTTP 200
++→ TX-90843 SUCCEEDED
++→ validation 4/4 PASS
++```
++
++The presentation engine intentionally rejects unsupported remediation, prevents premature validation/resolution, produces the same deterministic technical + business closure handoff, and resets to the canonical initial state.
++
++### PASS 14 verification
++
++- `PASS14_PRESENTATION_MODE_GATE_PASS` — 45/45 source/scope checks
++- `PASS14_PRESENTATION_WORKFLOW_SMOKE_PASS` — executable pure TypeScript/JavaScript five-step walkthrough to `RESOLVED`
++- presentation-state strict TypeScript compile — PASS
++- selected provider/controller/presentation UI TypeScript compile with temporary React shims — PASS
++- no Prisma, `DATABASE_URL` or fetch dependency exists inside the pure presentation-state module
++- PASS 15 CI/repository hardening was not started
++
++This pass does **not** claim final deployment, full npm dependency verification, production Next build, real PostgreSQL integration, browser-device QA or dependency audit. Those remain PASS 15+ release gates.
++
++### Next phase
++
++PASS 15 — CI & Repository Hardening. Keep Presentation Mode as the default recruiter runtime, then close the dependency/build/test/security gates before public deployment.
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/app/page.tsx /mnt/data/applicationops-candidate-demo-pass14/app/page.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/app/page.tsx	2026-09-03 10:17:40.021784595 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/app/page.tsx	2026-09-03 10:35:09.092840550 +0000
+@@ -1,4 +1,5 @@
+ import { CandidateDisclaimer } from "@/components/candidate-disclaimer";
++import { PresentationModeBanner } from "@/components/presentation-mode-banner";
+ import { MetricCard } from "@/components/metric-card";
+ import { SectionHeading } from "@/components/section-heading";
+ import { WorkflowPreview } from "@/components/workflow-preview";
+@@ -127,6 +128,7 @@
+         </section>
+ 
+         <CandidateDisclaimer text={CANDIDATE_DISCLAIMER} />
++        <PresentationModeBanner />
+ 
+         <section className="mt-5 rounded-2xl border border-sky-400/25 bg-[linear-gradient(180deg,rgba(14,25,40,0.94),rgba(8,15,24,0.94))] p-4 sm:p-5">
+           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+@@ -186,7 +188,7 @@
+           <SectionHeading
+             eyebrow="Release comparison"
+             title="Compare the change, then decide whether it is evidence or merely coincidence."
+-            description="Observable release facts stay separate from the root-cause decision. Configuration, timing and latency can strengthen a hypothesis, but the conclusion remains hidden until the guarded server-side evaluation succeeds."
++            description="Observable release facts stay separate from the root-cause decision. Configuration, timing and latency can strengthen a hypothesis, but the conclusion remains hidden until the guarded evaluation succeeds."
+           />
+           <ReleaseComparison />
+           <div className="mt-4">
+@@ -221,8 +223,8 @@
+         <section id="rollback-recovery" className="scroll-mt-20 border-t border-slate-900 py-10">
+           <SectionHeading
+             eyebrow="Controlled rollback & recovery"
+-            title="Execute the reversible action, then compare the persisted service state before and after."
+-            description="The rollback restores the known-good synthetic release and writes recovery evidence atomically. Recovery is visible here, while formal validation remains a separate next-stage gate."
++            title="Execute the reversible action, then compare the controlled service state before and after."
++            description="The rollback restores the known-good synthetic release and records recovery evidence as one controlled transition. Recovery is visible here, while formal validation remains a separate next-stage gate."
+           />
+           <RollbackRecovery />
+         </section>
+@@ -232,8 +234,8 @@
+         <section id="validation" className="scroll-mt-20 border-t border-slate-900 py-10">
+           <SectionHeading
+             eyebrow="Recovery validation"
+-            title="Prove recovery with four persisted checks before allowing closure."
+-            description="The server derives every check from persisted post-rollback evidence. Evidence readiness and authoritative validation remain separate until the explicit validation command succeeds."
++            title="Prove recovery with four explicit checks before allowing closure."
++            description="The validation engine derives every check from the post-rollback evidence. Evidence readiness and the validation result remain separate until the explicit validation action succeeds."
+           />
+           <RecoveryValidation />
+         </section>
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/diagnostic-correlation.tsx /mnt/data/applicationops-candidate-demo-pass14/components/diagnostic-correlation.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/diagnostic-correlation.tsx	2026-09-03 09:11:41.638337613 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/diagnostic-correlation.tsx	2026-09-03 10:34:03.084053969 +0000
+@@ -96,7 +96,7 @@
+   if (hydrating && !logs.length && !requests.length && !transactions.length) {
+     return (
+       <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 text-sm text-slate-400">
+-        Loading persisted diagnostic evidence…
++        Loading diagnostic evidence…
+       </div>
+     );
+   }
+@@ -107,7 +107,7 @@
+         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+           <div>
+             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">Single evidence trail</p>
+-            <h3 className="mt-2 text-lg font-semibold text-white">Follow one failure across release, request, logs and persisted transaction state.</h3>
++            <h3 className="mt-2 text-lg font-semibold text-white">Follow one failure across release, request, logs and transaction state.</h3>
+             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-400">
+               These records are joined by synthetic correlation identifiers. A complete trail strengthens the investigation context, but correlation alone does not independently establish causation.
+             </p>
+@@ -151,7 +151,7 @@
+ 
+         <aside className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5" aria-label="Correlation integrity checks">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Correlation integrity</p>
+-          <h3 className="mt-1 text-sm font-semibold text-white">Do the persisted records agree?</h3>
++          <h3 className="mt-1 text-sm font-semibold text-white">Do the recorded evidence items agree?</h3>
+           <div className="mt-3">
+             {correlation.checks.map((item) => (
+               <IntegrityRow key={item.key} check={item} />
+@@ -180,7 +180,7 @@
+                 </div>
+               ))
+             ) : (
+-              <p className="text-xs leading-5 text-amber-300">No persisted logs were found for the canonical request ID.</p>
++              <p className="text-xs leading-5 text-amber-300">No logs were found for the canonical request ID.</p>
+             )}
+           </div>
+         </article>
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/guided-controller.tsx /mnt/data/applicationops-candidate-demo-pass14/components/guided-controller.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/guided-controller.tsx	2026-09-03 10:19:04.385452970 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/guided-controller.tsx	2026-09-03 10:33:22.685544749 +0000
+@@ -4,7 +4,8 @@
+ import { useGuidedWorkflow } from "./guided-workflow-provider";
+ 
+ export function GuidedController() {
+-  const { step, busy, hydrating, error, runPrimaryAction, resetDemo, incident } = useGuidedWorkflow();
++  const { runtimeMode, step, busy, hydrating, error, runPrimaryAction, resetDemo, incident } = useGuidedWorkflow();
++  const presentation = runtimeMode === "presentation";
+   const definition = guidedStepDefinition(step);
+   const completed = step === 6;
+   const decisionRecorded = step === 3 && incident?.status === "REMEDIATION_SELECTED" && incident.selectedRemediation === "ROLLBACK_RELEASE";
+@@ -17,7 +18,7 @@
+     : validationComplete
+       ? "Recovery validation passed. The incident is ready for explicit closure."
+       : rollbackComplete
+-        ? "Recovery evidence is persisted and ready for explicit validation."
++        ? "Recovery evidence is ready for explicit validation."
+         : rollbackExecuting
+           ? "Controlled rollback is executing."
+           : decisionRecorded
+@@ -27,13 +28,21 @@
+   const description = completed
+     ? "Reset the synthetic scenario to replay the walkthrough."
+     : validationComplete
+-      ? "Resolve only after the persisted 4/4 validation gate has passed; the server will create both closure summaries atomically."
++      ? presentation
++        ? "Resolve only after the synthetic 4/4 validation gate has passed; the presentation engine will create both closure summaries from the browser evidence state."
++        : "Resolve only after the persisted 4/4 validation gate has passed; the server will create both closure summaries atomically."
+       : rollbackComplete
+-        ? "Run the four server-derived checks against the persisted post-rollback evidence before allowing closure."
++        ? presentation
++          ? "Run the four deterministic checks against the synthetic post-rollback evidence before allowing closure."
++          : "Run the four server-derived checks against the persisted post-rollback evidence before allowing closure."
+         : rollbackExecuting
+-          ? "The persisted release and application state are being changed atomically."
++          ? presentation
++            ? "The synthetic release and application state are being changed in the browser presentation engine."
++            : "The persisted release and application state are being changed atomically."
+           : decisionRecorded
+-            ? "The guarded backend will restore the known-good synthetic release and write recovery evidence in one transaction."
++            ? presentation
++              ? "The presentation engine will restore the known-good synthetic release and write deterministic recovery evidence in browser state."
++              : "The guarded backend will restore the known-good synthetic release and write recovery evidence in one transaction."
+             : definition?.description;
+ 
+   const actionLabel = busy
+@@ -61,12 +70,15 @@
+             <span className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+               {completed ? "Complete" : `Step ${step} of 5`}
+             </span>
++            <span className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${presentation ? "border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200" : "border-sky-400/25 bg-sky-400/[0.06] text-sky-200"}`}>
++              {presentation ? "Presentation mode" : "DB-backed mode"}
++            </span>
+             {incident?.status ? <span className="font-mono text-[11px] text-slate-400">{incident.status}</span> : null}
+           </div>
+           <p className="mt-1 truncate text-sm font-semibold text-white">{title}</p>
+           <p className="mt-0.5 hidden max-w-3xl text-xs text-slate-400 sm:block">{description}</p>
+           <div className="mt-1 min-h-4" aria-live="polite">
+-            {error ? <p className="text-xs text-rose-300">{error}</p> : hydrating ? <p className="text-xs text-slate-400">Loading persisted workflow state…</p> : null}
++            {error ? <p className="text-xs text-rose-300">{error}</p> : hydrating ? <p className="text-xs text-slate-400">Loading database-backed workflow state…</p> : null}
+           </div>
+         </div>
+ 
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/guided-status.tsx /mnt/data/applicationops-candidate-demo-pass14/components/guided-status.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/guided-status.tsx	2026-09-03 10:05:58.257173904 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/guided-status.tsx	2026-09-03 10:34:03.084668807 +0000
+@@ -35,7 +35,7 @@
+   const { validation } = useGuidedWorkflow();
+   const checks = validation.length ? validation : [];
+   if (!checks.length) {
+-    return <p className="text-sm text-slate-400">Validation state is loading from the persisted scenario.</p>;
++    return <p className="text-sm text-slate-400">Validation state is loading from the active demo scenario.</p>;
+   }
+   return (
+     <div className="space-y-2">
+@@ -61,7 +61,7 @@
+         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Resolution gate</p>
+         <p className="mt-3 text-sm leading-6 text-slate-300">
+           {status === "RESOLVED"
+-            ? "The persisted incident has passed validation and is now resolved. Detailed business handoff copy remains a later presentation pass."
++            ? "The incident has passed validation and is now resolved."
+             : status === "VALIDATED"
+               ? "Recovery validation is complete. Incident resolution remains a separate explicit action and has not been executed."
+               : "Recovery validation must complete before incident resolution becomes available."}
+@@ -82,7 +82,7 @@
+ 
+ export function GuidedAuditTrail() {
+   const { audit } = useGuidedWorkflow();
+-  if (!audit.length) return <p className="text-sm text-slate-400">Audit events are loading from the persisted scenario.</p>;
++  if (!audit.length) return <p className="text-sm text-slate-400">Audit events are loading from the active demo scenario.</p>;
+   return (
+     <div className="space-y-1">
+       {audit.map((event) => {
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/guided-workflow-provider.tsx /mnt/data/applicationops-candidate-demo-pass14/components/guided-workflow-provider.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/guided-workflow-provider.tsx	2026-09-03 10:21:12.088627196 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/guided-workflow-provider.tsx	2026-09-03 10:32:43.293870493 +0000
+@@ -11,7 +11,25 @@
+ } from "react";
+ 
+ import { SCENARIO } from "@/lib/data/synthetic-scenario";
+-import type { IncidentStatus, ReleaseStatus, RemediationAction, ValidationStatus } from "@/lib/domain/types";
++import type { RemediationAction } from "@/lib/domain/types";
++import {
++  createPresentationState,
++  presentationBeginRollback,
++  presentationCompleteRollback,
++  presentationConfirmRegression,
++  presentationRecordRemediation,
++  presentationResolve,
++  presentationRunValidation,
++  presentationStartInvestigation,
++  type PresentationAuditView,
++  type PresentationDiagnosticLogView,
++  type PresentationIncidentView,
++  type PresentationReleasesView,
++  type PresentationRequestView,
++  type PresentationRuntimeMode,
++  type PresentationTransactionView,
++  type PresentationValidationView
++} from "@/lib/presentation/presentation-state";
+ import {
+   guidedStepDefinition,
+   guidedStepFromIncidentStatus,
+@@ -25,92 +43,16 @@
+   error?: { code: string; message: string };
+ }
+ 
+-export interface GuidedIncidentView {
+-  id: string;
+-  status: IncidentStatus;
+-  rootCauseCode: string | null;
+-  technicalSummary: string | null;
+-  closureTechnicalSummary: string | null;
+-  closureBusinessSummary: string | null;
+-  selectedRemediation: string | null;
+-  affectedRelease: string;
+-  recoveredRelease: string | null;
+-  application: {
+-    serviceHealth: string;
+-    activeReleaseVersion: string;
+-    syntheticErrorRate: number;
+-  };
+-}
+-
+-
+-export interface GuidedReleaseView {
+-  id: string;
+-  version: string;
+-  status: ReleaseStatus;
+-  downstreamTimeoutMs: number;
+-  syntheticErrorRate: number;
+-  deployedAt: string | null;
+-}
+-
+-export interface GuidedReleasesView {
+-  previous: GuidedReleaseView;
+-  current: GuidedReleaseView;
+-  activeReleaseVersion: string;
+-  diff: {
+-    downstreamTimeoutMs: { previous: number; current: number };
+-    syntheticErrorRate: { previous: number; current: number };
+-  };
+-}
+-
+-export interface GuidedValidationView {
+-  id: string;
+-  key: string;
+-  label: string;
+-  required: boolean;
+-  status: ValidationStatus;
+-}
+-
+-export interface GuidedAuditView {
+-  id: string;
+-  type: string;
+-  actor: string;
+-  timestamp: string;
+-}
+-
+-export interface GuidedDiagnosticLogView {
+-  id: string;
+-  incidentId: string;
+-  timestamp: string;
+-  level: "INFO" | "WARN" | "ERROR";
+-  requestId: string | null;
+-  service: string;
+-  message: string;
+-}
+-
+-export interface GuidedRequestView {
+-  id: string;
+-  incidentId: string;
+-  requestId: string;
+-  method: string;
+-  path: string;
+-  responseStatus: number;
+-  durationMs: number;
+-  releaseVersion: string;
+-  failureCode: string | null;
+-  createdAt: string;
+-}
+-
+-export interface GuidedTransactionView {
+-  id: string;
+-  incidentId: string;
+-  requestId: string;
+-  status: "FAILED" | "SUCCEEDED";
+-  applicationVersion: string;
+-  failureCode: string | null;
+-  createdAt: string;
+-}
++export type GuidedIncidentView = PresentationIncidentView;
++export type GuidedReleasesView = PresentationReleasesView;
++export type GuidedValidationView = PresentationValidationView;
++export type GuidedAuditView = PresentationAuditView;
++export type GuidedDiagnosticLogView = PresentationDiagnosticLogView;
++export type GuidedRequestView = PresentationRequestView;
++export type GuidedTransactionView = PresentationTransactionView;
+ 
+ interface GuidedWorkflowContextValue {
++  runtimeMode: PresentationRuntimeMode;
+   incident: GuidedIncidentView | null;
+   validation: GuidedValidationView[];
+   releases: GuidedReleasesView | null;
+@@ -129,6 +71,8 @@
+ }
+ 
+ const GuidedWorkflowContext = createContext<GuidedWorkflowContextValue | null>(null);
++const RUNTIME_MODE: PresentationRuntimeMode =
++  process.env.NEXT_PUBLIC_APPLICATIONOPS_RUNTIME === "server" ? "server" : "presentation";
+ 
+ async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
+   const response = await fetch(url, {
+@@ -148,6 +92,10 @@
+   return payload.data;
+ }
+ 
++function wait(milliseconds: number) {
++  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
++}
++
+ function scrollToGuidedTarget(targetId: string) {
+   window.setTimeout(() => {
+     const target = document.getElementById(targetId);
+@@ -158,18 +106,31 @@
+ }
+ 
+ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
+-  const [incident, setIncident] = useState<GuidedIncidentView | null>(null);
+-  const [validation, setValidation] = useState<GuidedValidationView[]>([]);
+-  const [releases, setReleases] = useState<GuidedReleasesView | null>(null);
+-  const [audit, setAudit] = useState<GuidedAuditView[]>([]);
+-  const [logs, setLogs] = useState<GuidedDiagnosticLogView[]>([]);
+-  const [requests, setRequests] = useState<GuidedRequestView[]>([]);
+-  const [transactions, setTransactions] = useState<GuidedTransactionView[]>([]);
++  const [presentationState, setPresentationState] = useState(() => createPresentationState());
++  const [serverIncident, setServerIncident] = useState<GuidedIncidentView | null>(null);
++  const [serverValidation, setServerValidation] = useState<GuidedValidationView[]>([]);
++  const [serverReleases, setServerReleases] = useState<GuidedReleasesView | null>(null);
++  const [serverAudit, setServerAudit] = useState<GuidedAuditView[]>([]);
++  const [serverLogs, setServerLogs] = useState<GuidedDiagnosticLogView[]>([]);
++  const [serverRequests, setServerRequests] = useState<GuidedRequestView[]>([]);
++  const [serverTransactions, setServerTransactions] = useState<GuidedTransactionView[]>([]);
+   const [busy, setBusy] = useState(false);
+-  const [hydrating, setHydrating] = useState(true);
++  const [hydrating, setHydrating] = useState(RUNTIME_MODE === "server");
+   const [error, setError] = useState<string | null>(null);
+ 
++  const incident = RUNTIME_MODE === "presentation" ? presentationState.incident : serverIncident;
++  const validation = RUNTIME_MODE === "presentation" ? presentationState.validation : serverValidation;
++  const releases = RUNTIME_MODE === "presentation" ? presentationState.releases : serverReleases;
++  const audit = RUNTIME_MODE === "presentation" ? presentationState.audit : serverAudit;
++  const logs = RUNTIME_MODE === "presentation" ? presentationState.logs : serverLogs;
++  const requests = RUNTIME_MODE === "presentation" ? presentationState.requests : serverRequests;
++  const transactions = RUNTIME_MODE === "presentation" ? presentationState.transactions : serverTransactions;
++
+   const refresh = useCallback(async () => {
++    if (RUNTIME_MODE === "presentation") {
++      setError(null);
++      return;
++    }
+     const [nextIncident, nextValidation, nextReleases, nextAudit, nextLogs, nextRequests, nextTransactions] = await Promise.all([
+       apiRequest<GuidedIncidentView>(`/api/incidents/${SCENARIO.incidentId}`),
+       apiRequest<GuidedValidationView[]>(`/api/incidents/${SCENARIO.incidentId}/validation`),
+@@ -179,16 +140,20 @@
+       apiRequest<GuidedRequestView[]>(`/api/incidents/${SCENARIO.incidentId}/requests`),
+       apiRequest<GuidedTransactionView[]>(`/api/incidents/${SCENARIO.incidentId}/transactions`)
+     ]);
+-    setIncident(nextIncident);
+-    setValidation(nextValidation);
+-    setReleases(nextReleases);
+-    setAudit(nextAudit);
+-    setLogs(nextLogs);
+-    setRequests(nextRequests);
+-    setTransactions(nextTransactions);
++    setServerIncident(nextIncident);
++    setServerValidation(nextValidation);
++    setServerReleases(nextReleases);
++    setServerAudit(nextAudit);
++    setServerLogs(nextLogs);
++    setServerRequests(nextRequests);
++    setServerTransactions(nextTransactions);
+   }, []);
+ 
+   useEffect(() => {
++    if (RUNTIME_MODE === "presentation") {
++      setHydrating(false);
++      return;
++    }
+     let cancelled = false;
+     async function hydrate() {
+       try {
+@@ -196,7 +161,7 @@
+         if (!cancelled) setError(null);
+       } catch (caught) {
+         if (!cancelled) {
+-          setError(caught instanceof Error ? caught.message : "Unable to load the persisted demo state.");
++          setError(caught instanceof Error ? caught.message : "Unable to load the database-backed demo state.");
+         }
+       } finally {
+         if (!cancelled) setHydrating(false);
+@@ -213,6 +178,45 @@
+     [incident?.status]
+   );
+ 
++  const runPresentationPrimaryAction = useCallback(async () => {
++    switch (step) {
++      case 1: {
++        const next = presentationStartInvestigation(presentationState);
++        setPresentationState(next);
++        break;
++      }
++      case 2: {
++        const next = presentationConfirmRegression(presentationState);
++        setPresentationState(next);
++        break;
++      }
++      case 3: {
++        if (presentationState.incident.status !== "REMEDIATION_SELECTED" || presentationState.incident.selectedRemediation !== "ROLLBACK_RELEASE") {
++          scrollToGuidedTarget("remediation");
++          return;
++        }
++        const started = presentationBeginRollback(presentationState);
++        setPresentationState(started);
++        await wait(420);
++        const completed = presentationCompleteRollback(started);
++        setPresentationState(completed);
++        break;
++      }
++      case 4: {
++        const next = presentationRunValidation(presentationState);
++        setPresentationState(next);
++        break;
++      }
++      case 5: {
++        const next = presentationResolve(presentationState);
++        setPresentationState(next);
++        break;
++      }
++      case 6:
++        return;
++    }
++  }, [presentationState, step]);
++
+   const runPrimaryAction = useCallback(async () => {
+     if (busy || hydrating || step === 6) return;
+     const definition = guidedStepDefinition(step);
+@@ -221,78 +225,95 @@
+     setBusy(true);
+     setError(null);
+     try {
+-      switch (step) {
+-        case 1:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/investigate`, { method: "POST" });
+-          break;
+-        case 2:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/confirm-regression`, { method: "POST" });
+-          break;
+-        case 3:
+-          if (incident?.status !== "REMEDIATION_SELECTED" || incident.selectedRemediation !== "ROLLBACK_RELEASE") {
+-            scrollToGuidedTarget("remediation");
+-            return;
+-          }
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/rollback`, { method: "POST" });
+-          break;
+-        case 4:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
+-          break;
+-        case 5:
+-          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
+-          break;
++      if (RUNTIME_MODE === "presentation") {
++        await runPresentationPrimaryAction();
++      } else {
++        switch (step) {
++          case 1:
++            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/investigate`, { method: "POST" });
++            break;
++          case 2:
++            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/confirm-regression`, { method: "POST" });
++            break;
++          case 3:
++            if (incident?.status !== "REMEDIATION_SELECTED" || incident.selectedRemediation !== "ROLLBACK_RELEASE") {
++              scrollToGuidedTarget("remediation");
++              return;
++            }
++            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/rollback`, { method: "POST" });
++            break;
++          case 4:
++            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
++            break;
++          case 5:
++            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
++            break;
++        }
++        await refresh();
+       }
+-
+-      await refresh();
+       scrollToGuidedTarget(step === 4 ? "validation" : nextGuidedTargetAfterAction(step));
+     } catch (caught) {
+-      try {
+-        await refresh();
+-      } catch {
+-        // Preserve the original action error; the next manual refresh can retry state hydration.
++      if (RUNTIME_MODE === "server") {
++        try {
++          await refresh();
++        } catch {
++          // Preserve the original action error; the next manual refresh can retry state hydration.
++        }
+       }
+       setError(caught instanceof Error ? caught.message : "The guided action failed.");
+     } finally {
+       setBusy(false);
+     }
+-  }, [busy, hydrating, incident?.status, incident?.selectedRemediation, refresh, step]);
++  }, [busy, hydrating, incident?.status, incident?.selectedRemediation, refresh, runPresentationPrimaryAction, step]);
+ 
+   const submitRemediationDecision = useCallback(async (action: RemediationAction) => {
+     if (busy || hydrating) return;
+     setBusy(true);
+     setError(null);
+     try {
+-      await apiRequest(`/api/incidents/${SCENARIO.incidentId}/remediation`, {
+-        method: "POST",
+-        body: JSON.stringify({ action })
+-      });
+-      await refresh();
++      if (RUNTIME_MODE === "presentation") {
++        setPresentationState(presentationRecordRemediation(presentationState, action));
++      } else {
++        await apiRequest(`/api/incidents/${SCENARIO.incidentId}/remediation`, {
++          method: "POST",
++          body: JSON.stringify({ action })
++        });
++        await refresh();
++      }
+       scrollToGuidedTarget("remediation");
+     } catch (caught) {
+-      try {
+-        await refresh();
+-      } catch {
+-        // Preserve the decision error as the primary feedback.
++      if (RUNTIME_MODE === "server") {
++        try {
++          await refresh();
++        } catch {
++          // Preserve the decision error as the primary feedback.
++        }
+       }
+       setError(caught instanceof Error ? caught.message : "The remediation decision could not be recorded.");
+     } finally {
+       setBusy(false);
+     }
+-  }, [busy, hydrating, refresh]);
++  }, [busy, hydrating, presentationState, refresh]);
+ 
+   const resetDemo = useCallback(async () => {
+     if (busy) return;
+     setBusy(true);
+     setError(null);
+     try {
+-      await apiRequest(`/api/demo/reset`, { method: "POST" });
+-      await refresh();
++      if (RUNTIME_MODE === "presentation") {
++        setPresentationState(createPresentationState());
++      } else {
++        await apiRequest(`/api/demo/reset`, { method: "POST" });
++        await refresh();
++      }
+       scrollToGuidedTarget("incident");
+     } catch (caught) {
+-      try {
+-        await refresh();
+-      } catch {
+-        // Preserve reset failure as the primary feedback.
++      if (RUNTIME_MODE === "server") {
++        try {
++          await refresh();
++        } catch {
++          // Preserve reset failure as the primary feedback.
++        }
+       }
+       setError(caught instanceof Error ? caught.message : "The demo reset failed.");
+     } finally {
+@@ -301,7 +322,24 @@
+   }, [busy, refresh]);
+ 
+   const value = useMemo<GuidedWorkflowContextValue>(
+-    () => ({ incident, validation, releases, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh }),
++    () => ({
++      runtimeMode: RUNTIME_MODE,
++      incident,
++      validation,
++      releases,
++      audit,
++      logs,
++      requests,
++      transactions,
++      step,
++      busy,
++      hydrating,
++      error,
++      runPrimaryAction,
++      submitRemediationDecision,
++      resetDemo,
++      refresh
++    }),
+     [incident, validation, releases, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh]
+   );
+ 
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/presentation-mode-banner.tsx /mnt/data/applicationops-candidate-demo-pass14/components/presentation-mode-banner.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/presentation-mode-banner.tsx	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/presentation-mode-banner.tsx	2026-09-03 10:33:01.768178603 +0000
+@@ -0,0 +1,18 @@
++"use client";
++
++import { useGuidedWorkflow } from "./guided-workflow-provider";
++
++export function PresentationModeBanner() {
++  const { runtimeMode } = useGuidedWorkflow();
++  if (runtimeMode !== "presentation") return null;
++
++  return (
++    <aside
++      aria-label="Recruiter presentation mode"
++      className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.055] px-4 py-3 text-xs leading-5 text-slate-300 sm:px-5"
++    >
++      <span className="mr-2 font-semibold text-emerald-200">Recruiter Presentation Mode.</span>
++      This live walkthrough uses deterministic synthetic state entirely in the browser, so it does not require PostgreSQL or access to any external bank system. The repository keeps the separate database-backed implementation and tests for technical review.
++    </aside>
++  );
++}
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/recovery-validation.tsx /mnt/data/applicationops-candidate-demo-pass14/components/recovery-validation.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/recovery-validation.tsx	2026-09-03 10:04:01.155183510 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/recovery-validation.tsx	2026-09-03 10:34:03.084408762 +0000
+@@ -61,13 +61,13 @@
+ 
+   const title =
+     view.mode === "READY"
+-      ? "Recovery evidence is ready for a server-derived 4/4 validation run."
++      ? "Recovery evidence is ready for an evidence-derived 4/4 validation run."
+       : view.mode === "VALIDATED"
+-        ? "Validation passed. All four required checks are persisted."
++        ? "Validation passed. All four required checks are recorded."
+         : view.mode === "BLOCKED"
+-          ? "Validation is blocked by incomplete persisted recovery evidence."
++          ? "Validation is blocked by incomplete recovery evidence."
+           : view.mode === "INCONSISTENT"
+-            ? "Validation state is inconsistent with the persisted evidence."
++            ? "Validation state is inconsistent with the recorded evidence."
+             : "Validation remains locked until controlled rollback completes.";
+ 
+   const tone =
+@@ -92,7 +92,7 @@
+           </span>
+         </div>
+         <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">
+-          The browser does not mark these checks as passed. The validation command re-reads persisted release, service, request, transaction and log evidence on the server, then atomically persists the four canonical check results together with the VALIDATED incident transition and validation audit events.
++          The validation action evaluates the recorded release, service, request, transaction and log evidence, then records the four canonical check results together with the VALIDATED incident transition and validation audit events.
+         </p>
+       </section>
+ 
+@@ -123,10 +123,10 @@
+           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Evidence readiness</p>
+             <p className="mt-2 text-3xl font-semibold text-white">{view.evidencePassCount} / 4</p>
+-            <p className="mt-2 text-xs leading-5 text-slate-400">Observed directly from persisted post-rollback state. This is not yet the authoritative validation result.</p>
++            <p className="mt-2 text-xs leading-5 text-slate-400">Observed directly from the post-rollback evidence state. This is not yet the authoritative validation result.</p>
+           </div>
+           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Persisted validation</p>
++            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Recorded validation</p>
+             <p className={`mt-2 text-3xl font-semibold ${view.persistedPassCount === 4 ? "text-emerald-200" : "text-white"}`}>
+               {view.persistedPassCount} / 4
+             </p>
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/remediation-decision.tsx /mnt/data/applicationops-candidate-demo-pass14/components/remediation-decision.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/remediation-decision.tsx	2026-09-03 09:51:14.298483712 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/remediation-decision.tsx	2026-09-03 10:33:32.034110638 +0000
+@@ -26,7 +26,8 @@
+ } as const;
+ 
+ export function RemediationDecision() {
+-  const { incident, busy, submitRemediationDecision } = useGuidedWorkflow();
++  const { runtimeMode, incident, busy, submitRemediationDecision } = useGuidedWorkflow();
++  const presentation = runtimeMode === "presentation";
+   const [reviewedAction, setReviewedAction] = useState<RemediationAction | null>(null);
+ 
+   const mode = remediationDecisionMode({
+@@ -45,7 +46,7 @@
+     return (
+       <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Decision gate</p>
+-        <p className="mt-2 text-sm font-semibold text-slate-200">Remediation stays locked until the persisted root-cause decision is confirmed.</p>
++        <p className="mt-2 text-sm font-semibold text-slate-200">Remediation stays locked until the root-cause decision is confirmed by the active demo engine.</p>
+         <p className="mt-2 text-xs leading-5 text-slate-400">Review the release and diagnostic evidence first. This prevents the recovery action from becoming a preselected answer.</p>
+       </div>
+     );
+@@ -58,12 +59,12 @@
+         <div className="rounded-2xl border border-sky-400/25 bg-sky-400/[0.05] p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Decision recorded</p>
+           <p className="mt-2 text-xl font-semibold text-white">Rollback release</p>
+-          <p className="mt-3 text-sm leading-6 text-slate-300">The guarded backend persisted <span className="font-mono text-sky-200">ROLLBACK_RELEASE</span> after the release regression was confirmed. {executed ? "The decision remains visible after execution for traceability." : "Recovery execution remains a separate controlled action."}</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">{presentation ? "The presentation engine recorded " : "The guarded backend persisted "}<span className="font-mono text-sky-200">ROLLBACK_RELEASE</span> after the release regression was confirmed. {executed ? " The decision remains visible after execution for traceability." : " Recovery execution remains a separate controlled action."}</p>
+         </div>
+         <aside className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Why this decision fits</p>
+           <p className="mt-3 text-sm leading-6 text-slate-300">The previous release is stable, the confirmed regression is release-level, and rollback is reversible for this synthetic scenario.</p>
+-          <p className="mt-3 text-xs leading-5 text-slate-400">{executed ? "Review the controlled rollback and persisted recovery evidence in the next section." : "The rollback has not executed yet; use the guided controller when ready."}</p>
++          <p className="mt-3 text-xs leading-5 text-slate-400">{executed ? "Review the controlled rollback and recovery evidence in the next section." : "The rollback has not executed yet; use the guided controller when ready."}</p>
+         </aside>
+       </div>
+     );
+@@ -79,7 +80,7 @@
+           </div>
+           <span className="w-fit rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">Nothing is preselected</span>
+         </div>
+-        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">Select each option to inspect its risk and evidence fit. Only the action supported by the confirmed evidence can be recorded by the guarded workflow.</p>
++        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">Select each option to inspect its risk and evidence fit. Only the action supported by the confirmed evidence can be recorded by the active workflow engine.</p>
+       </div>
+ 
+       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" role="list" aria-label="Remediation options">
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/resolution-handoff.tsx /mnt/data/applicationops-candidate-demo-pass14/components/resolution-handoff.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/resolution-handoff.tsx	2026-09-03 10:23:49.980415994 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/resolution-handoff.tsx	2026-09-03 10:34:03.084532082 +0000
+@@ -16,21 +16,21 @@
+         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+           <div>
+             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Resolution gate</p>
+-            <h3 className="mt-2 text-lg font-semibold text-white">{view.mode === "RESOLVED" ? "Incident resolved with persisted closure handoff." : view.mode === "READY" ? "Validated recovery is ready for explicit incident closure." : view.mode === "INCONSISTENT" ? "Closure state is inconsistent with persisted evidence." : "Resolution stays locked until validation passes."}</h3>
++            <h3 className="mt-2 text-lg font-semibold text-white">{view.mode === "RESOLVED" ? "Incident resolved with a recorded closure handoff." : view.mode === "READY" ? "Validated recovery is ready for explicit incident closure." : view.mode === "INCONSISTENT" ? "Closure state is inconsistent with the recorded evidence." : "Resolution stays locked until validation passes."}</h3>
+           </div>
+           <span className="w-fit rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">{view.mode}</span>
+         </div>
+-        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">The server derives both closure summaries from persisted root-cause, rollback and 4/4 validation evidence. The browser does not author or mark the incident resolved on its own.</p>
++        <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">The closure engine derives both summaries from the recorded root-cause, rollback and 4/4 validation evidence. The incident is marked resolved only after the explicit closure action succeeds.</p>
+       </section>
+ 
+       <div className="grid gap-4 lg:grid-cols-2">
+         <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Technical closure summary</p>
+-          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureTechnicalSummary ?? "Generated and persisted only when the explicit RESOLVE INCIDENT command succeeds."}</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureTechnicalSummary ?? "Generated and recorded only when the explicit RESOLVE INCIDENT action succeeds."}</p>
+         </article>
+         <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">Business-facing handoff</p>
+-          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureBusinessSummary ?? "A concise stakeholder update becomes available only after the explicit resolution transaction succeeds."}</p>
++          <p className="mt-3 text-sm leading-6 text-slate-300">{incident?.closureBusinessSummary ?? "A concise stakeholder update becomes available only after the explicit resolution action succeeds."}</p>
+         </article>
+       </div>
+ 
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/rollback-recovery.tsx /mnt/data/applicationops-candidate-demo-pass14/components/rollback-recovery.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/rollback-recovery.tsx	2026-09-03 10:04:35.985437194 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/rollback-recovery.tsx	2026-09-03 10:34:03.084252769 +0000
+@@ -48,9 +48,9 @@
+               {mode === "READY"
+                 ? "Decision recorded. Rollback is ready for explicit execution."
+                 : mode === "EXECUTING"
+-                  ? "Rollback is executing against the persisted release state."
++                  ? "Rollback is executing against the controlled release state."
+                   : mode === "RECOVERED"
+-                    ? "Rollback completed. Recovery evidence is persisted."
++                    ? "Rollback completed. Recovery evidence is recorded."
+                     : mode === "INCONSISTENT"
+                       ? "Post-rollback state is incomplete or inconsistent."
+                       : "Rollback remains locked until the supported remediation is recorded."}
+@@ -61,7 +61,7 @@
+           </span>
+         </div>
+         <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">
+-          The rollback action is a separate persisted command. It restores the known-good synthetic release, updates service state and writes recovery evidence atomically. Formal recovery validation remains a separate explicit action after this persisted recovery state is complete.
++          The rollback action is a separate controlled command. It restores the known-good synthetic release, updates service state and records recovery evidence as one guided transition. Formal recovery validation remains a separate explicit action after this recovery state is complete.
+         </p>
+       </div>
+ 
+@@ -87,7 +87,7 @@
+           <div className="flex items-center justify-between gap-3">
+             <div>
+               <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${mode === "RECOVERED" ? "text-emerald-300" : "text-slate-400"}`}>After rollback</p>
+-              <p className="mt-1 text-lg font-semibold text-white">{mode === "RECOVERED" ? "Known-good release restored" : "Awaiting persisted recovery"}</p>
++              <p className="mt-1 text-lg font-semibold text-white">{mode === "RECOVERED" ? "Known-good release restored" : "Awaiting controlled recovery"}</p>
+             </div>
+             <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${mode === "RECOVERED" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-slate-700 bg-slate-900 text-slate-400"}`}>
+               {mode === "RECOVERED" ? "Persisted" : "Pending"}
+@@ -110,7 +110,7 @@
+           <div className="mt-4 grid gap-2 sm:grid-cols-2">
+             <EvidenceItem ok={evidence.rollbackStarted} label="ROLLBACK_STARTED audit event recorded" />
+             <EvidenceItem ok={evidence.rollbackCompleted} label="ROLLBACK_COMPLETED audit event recorded" />
+-            <EvidenceItem ok={evidence.affectedReleaseRolledBack} label={`v${SCENARIO.currentRelease.version} persisted as ROLLED_BACK`} />
++            <EvidenceItem ok={evidence.affectedReleaseRolledBack} label={`v${SCENARIO.currentRelease.version} recorded as ROLLED_BACK`} />
+             <EvidenceItem ok={evidence.previousReleaseActive} label={`v${SCENARIO.previousRelease.version} restored as active release`} />
+             <EvidenceItem ok={evidence.recoveryRequestSucceeded} label={`${SCENARIO.recoveryRequestId} returned HTTP 200`} />
+             <EvidenceItem ok={evidence.recoveryTransactionSucceeded} label={`${SCENARIO.recoveryTransactionId} completed successfully`} />
+@@ -121,7 +121,7 @@
+           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">Boundary</p>
+           <p className="mt-2 text-sm font-semibold text-slate-100">Recovery observed ≠ incident validated.</p>
+           <p className="mt-2 text-xs leading-5 text-slate-400">
+-            Even after the service returns to the synthetic healthy state, the four canonical validation checks remain a separate gate and must be evaluated from persisted recovery evidence before closure.
++            Even after the service returns to the synthetic healthy state, the four canonical validation checks remain a separate gate and must be evaluated from the recorded recovery evidence before closure.
+           </p>
+         </aside>
+       </div>
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/components/root-cause-evidence.tsx /mnt/data/applicationops-candidate-demo-pass14/components/root-cause-evidence.tsx
+--- /mnt/data/applicationops-candidate-demo-pass13/components/root-cause-evidence.tsx	2026-09-03 08:40:54.154021880 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/components/root-cause-evidence.tsx	2026-09-03 10:34:03.083710824 +0000
+@@ -28,7 +28,7 @@
+       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+         <div>
+           <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${confirmed ? "text-emerald-300" : "text-amber-300"}`}>
+-            {confirmed ? "Root-cause decision · persisted" : "Root-cause checkpoint · hypothesis"}
++            {confirmed ? "Root-cause decision · recorded" : "Root-cause checkpoint · hypothesis"}
+           </p>
+           <h3 className="mt-2 text-lg font-semibold text-white">
+             {confirmed ? "The guarded evidence engine confirmed the regression." : "The signals line up, but correlation is not yet a conclusion."}
+@@ -60,13 +60,13 @@
+       {confirmed ? (
+         <div className="mt-4 grid gap-3 lg:grid-cols-[0.42fr_0.58fr]">
+           <div className="rounded-xl border border-emerald-400/20 bg-slate-950/55 p-4">
+-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Persisted root-cause code</p>
++            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Recorded root-cause code</p>
+             <p className="mt-2 break-words font-mono text-sm font-semibold text-emerald-200">{incident?.rootCauseCode}</p>
+           </div>
+           <div className="rounded-xl border border-slate-800 bg-slate-950/55 p-4">
+             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Why it was confirmed</p>
+             <p className="mt-2 text-sm leading-6 text-slate-300">
+-              {incident?.technicalSummary ?? "The persisted server-side assessment confirmed the release regression from the available synthetic evidence."}
++              {incident?.technicalSummary ?? "The guarded assessment confirmed the release regression from the available synthetic evidence."}
+             </p>
+           </div>
+         </div>
+@@ -74,7 +74,7 @@
+         <div className="mt-4 rounded-xl border border-sky-400/20 bg-sky-400/[0.045] p-4">
+           <p className="text-xs font-semibold text-sky-200">Investigation rule</p>
+           <p className="mt-1.5 text-xs leading-5 text-slate-400">
+-            Do not label the release as the root cause from timing or configuration alone. Review the diagnostics below, then use the guided evidence-evaluation action. The browser does not derive or persist the root cause itself.
++            Do not label the release as the root cause from timing or configuration alone. Review the diagnostics below, then use the guided evidence-evaluation action. The conclusion is revealed only after the guarded evaluation succeeds.
+           </p>
+         </div>
+       )}
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/lib/presentation/presentation-state.ts /mnt/data/applicationops-candidate-demo-pass14/lib/presentation/presentation-state.ts
+--- /mnt/data/applicationops-candidate-demo-pass13/lib/presentation/presentation-state.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/lib/presentation/presentation-state.ts	2026-09-03 10:32:09.923947519 +0000
+@@ -0,0 +1,376 @@
++import { buildSyntheticScenarioSeed, SCENARIO } from "@/lib/data/synthetic-scenario";
++import { assessRootCause } from "@/lib/domain/root-cause";
++import type { IncidentStatus, ReleaseStatus, RemediationAction, ValidationStatus } from "@/lib/domain/types";
++import { deriveRecoveryValidationEvidence, recoveryEvidencePassCount } from "@/lib/evidence/recovery-validation";
++import { deriveResolutionHandoff } from "@/lib/evidence/resolution-handoff";
++
++export type PresentationRuntimeMode = "presentation" | "server";
++
++export interface PresentationIncidentView {
++  id: string;
++  status: IncidentStatus;
++  rootCauseCode: string | null;
++  technicalSummary: string | null;
++  closureTechnicalSummary: string | null;
++  closureBusinessSummary: string | null;
++  selectedRemediation: string | null;
++  affectedRelease: string;
++  recoveredRelease: string | null;
++  application: {
++    serviceHealth: string;
++    activeReleaseVersion: string;
++    syntheticErrorRate: number;
++  };
++}
++
++export interface PresentationReleaseView {
++  id: string;
++  version: string;
++  status: ReleaseStatus;
++  downstreamTimeoutMs: number;
++  syntheticErrorRate: number;
++  deployedAt: string | null;
++}
++
++export interface PresentationReleasesView {
++  previous: PresentationReleaseView;
++  current: PresentationReleaseView;
++  activeReleaseVersion: string;
++  diff: {
++    downstreamTimeoutMs: { previous: number; current: number };
++    syntheticErrorRate: { previous: number; current: number };
++  };
++}
++
++export interface PresentationValidationView {
++  id: string;
++  key: string;
++  label: string;
++  required: boolean;
++  status: ValidationStatus;
++}
++
++export interface PresentationAuditView {
++  id: string;
++  type: string;
++  actor: string;
++  timestamp: string;
++}
++
++export interface PresentationDiagnosticLogView {
++  id: string;
++  incidentId: string;
++  timestamp: string;
++  level: "INFO" | "WARN" | "ERROR";
++  requestId: string | null;
++  service: string;
++  message: string;
++}
++
++export interface PresentationRequestView {
++  id: string;
++  incidentId: string;
++  requestId: string;
++  method: string;
++  path: string;
++  responseStatus: number;
++  durationMs: number;
++  releaseVersion: string;
++  failureCode: string | null;
++  createdAt: string;
++}
++
++export interface PresentationTransactionView {
++  id: string;
++  incidentId: string;
++  requestId: string;
++  status: "FAILED" | "SUCCEEDED";
++  applicationVersion: string;
++  failureCode: string | null;
++  createdAt: string;
++}
++
++export interface PresentationState {
++  incident: PresentationIncidentView;
++  validation: PresentationValidationView[];
++  releases: PresentationReleasesView;
++  audit: PresentationAuditView[];
++  logs: PresentationDiagnosticLogView[];
++  requests: PresentationRequestView[];
++  transactions: PresentationTransactionView[];
++}
++
++const T = {
++  investigation: "2026-09-02T07:33:00.000Z",
++  comparison: "2026-09-02T07:34:00.000Z",
++  regression: "2026-09-02T07:34:01.000Z",
++  remediation: "2026-09-02T07:35:00.000Z",
++  rollbackStarted: "2026-09-02T07:36:00.000Z",
++  rollbackCompleted: "2026-09-02T07:36:01.000Z",
++  recovery: "2026-09-02T07:36:02.000Z",
++  validationStarted: "2026-09-02T07:37:00.000Z",
++  validationPassed: "2026-09-02T07:37:01.000Z",
++  handoff: "2026-09-02T07:38:00.000Z",
++  resolved: "2026-09-02T07:38:01.000Z"
++} as const;
++
++function audit(id: string, type: string, actor: string, timestamp: string): PresentationAuditView {
++  return { id, type, actor, timestamp };
++}
++
++function cloneState(state: PresentationState): PresentationState {
++  return {
++    incident: {
++      ...state.incident,
++      application: { ...state.incident.application }
++    },
++    validation: state.validation.map((check) => ({ ...check })),
++    releases: {
++      ...state.releases,
++      previous: { ...state.releases.previous },
++      current: { ...state.releases.current },
++      diff: {
++        downstreamTimeoutMs: { ...state.releases.diff.downstreamTimeoutMs },
++        syntheticErrorRate: { ...state.releases.diff.syntheticErrorRate }
++      }
++    },
++    audit: state.audit.map((event) => ({ ...event })),
++    logs: state.logs.map((log) => ({ ...log })),
++    requests: state.requests.map((request) => ({ ...request })),
++    transactions: state.transactions.map((transaction) => ({ ...transaction }))
++  };
++}
++
++export function createPresentationState(): PresentationState {
++  const seed = buildSyntheticScenarioSeed();
++  const previous = seed.releases.find((release) => release.version === SCENARIO.previousRelease.version)!;
++  const current = seed.releases.find((release) => release.version === SCENARIO.currentRelease.version)!;
++
++  return {
++    incident: {
++      id: seed.incident.id,
++      status: seed.incident.status,
++      rootCauseCode: seed.incident.rootCauseCode,
++      technicalSummary: seed.incident.technicalSummary,
++      closureTechnicalSummary: seed.incident.closureTechnicalSummary,
++      closureBusinessSummary: seed.incident.closureBusinessSummary,
++      selectedRemediation: seed.incident.selectedRemediation,
++      affectedRelease: seed.incident.affectedRelease,
++      recoveredRelease: seed.incident.recoveredRelease,
++      application: {
++        serviceHealth: seed.application.serviceHealth,
++        activeReleaseVersion: seed.application.activeReleaseVersion,
++        syntheticErrorRate: seed.application.syntheticErrorRate
++      }
++    },
++    validation: seed.validationChecks.map((check) => ({ ...check })),
++    releases: {
++      previous: {
++        id: previous.id,
++        version: previous.version,
++        status: previous.status,
++        downstreamTimeoutMs: previous.downstreamTimeoutMs,
++        syntheticErrorRate: previous.syntheticErrorRate,
++        deployedAt: previous.deployedAt?.toISOString() ?? null
++      },
++      current: {
++        id: current.id,
++        version: current.version,
++        status: current.status,
++        downstreamTimeoutMs: current.downstreamTimeoutMs,
++        syntheticErrorRate: current.syntheticErrorRate,
++        deployedAt: current.deployedAt?.toISOString() ?? null
++      },
++      activeReleaseVersion: seed.application.activeReleaseVersion,
++      diff: {
++        downstreamTimeoutMs: {
++          previous: previous.downstreamTimeoutMs,
++          current: current.downstreamTimeoutMs
++        },
++        syntheticErrorRate: {
++          previous: previous.syntheticErrorRate,
++          current: current.syntheticErrorRate
++        }
++      }
++    },
++    audit: seed.auditEvents.map((event) => ({
++      id: event.id,
++      type: event.type,
++      actor: event.actor,
++      timestamp: event.timestamp.toISOString()
++    })),
++    logs: seed.logs.map((log) => ({ ...log, timestamp: log.timestamp.toISOString() })),
++    requests: seed.requests.map((request) => ({ ...request, createdAt: request.createdAt.toISOString() })),
++    transactions: seed.transactions.map((transaction) => ({ ...transaction, createdAt: transaction.createdAt.toISOString() }))
++  };
++}
++
++function requireStatus(state: PresentationState, expected: IncidentStatus, action: string) {
++  if (state.incident.status !== expected) {
++    throw new Error(`${action} requires ${expected}; current presentation state is ${state.incident.status}.`);
++  }
++}
++
++export function presentationStartInvestigation(state: PresentationState): PresentationState {
++  requireStatus(state, "OPEN", "Start investigation");
++  const next = cloneState(state);
++  next.incident.status = "INVESTIGATING";
++  next.audit.push(audit("presentation-investigation-started", "INVESTIGATION_STARTED", "Candidate reviewer", T.investigation));
++  return next;
++}
++
++export function presentationConfirmRegression(state: PresentationState): PresentationState {
++  requireStatus(state, "INVESTIGATING", "Evaluate release evidence");
++  const timeoutErrors = state.logs.filter((log) => log.level === "ERROR" && log.message.includes(SCENARIO.failureCode)).length;
++  const assessment = assessRootCause({
++    currentTimeoutMs: state.releases.current.downstreamTimeoutMs,
++    previousTimeoutMs: state.releases.previous.downstreamTimeoutMs,
++    observedDownstreamLatencyMs: SCENARIO.observedDownstreamLatencyMs,
++    incidentStartedAfterDeployment: true,
++    timeoutErrorCount: timeoutErrors
++  });
++  if (assessment.code !== "RELEASE_TIMEOUT_REGRESSION" || assessment.confidence !== "HIGH") {
++    throw new Error("The synthetic presentation evidence did not confirm the expected release regression.");
++  }
++
++  const next = cloneState(state);
++  next.incident.status = "REGRESSION_CONFIRMED";
++  next.incident.rootCauseCode = assessment.code;
++  next.incident.technicalSummary = assessment.explanation;
++  next.audit.push(
++    audit("presentation-release-comparison-reviewed", "RELEASE_COMPARISON_REVIEWED", "Candidate reviewer", T.comparison),
++    audit("presentation-regression-confirmed", "RELEASE_REGRESSION_CONFIRMED", "ApplicationOps presentation engine", T.regression)
++  );
++  return next;
++}
++
++export function presentationRecordRemediation(state: PresentationState, action: RemediationAction): PresentationState {
++  requireStatus(state, "REGRESSION_CONFIRMED", "Record remediation");
++  if (state.incident.rootCauseCode !== "RELEASE_TIMEOUT_REGRESSION") {
++    throw new Error("Remediation cannot be recorded before the release regression is confirmed.");
++  }
++  if (action !== "ROLLBACK_RELEASE") {
++    throw new Error("This synthetic evidence set supports ROLLBACK_RELEASE as the successful remediation path.");
++  }
++
++  const next = cloneState(state);
++  next.incident.status = "REMEDIATION_SELECTED";
++  next.incident.selectedRemediation = action;
++  next.audit.push(audit("presentation-remediation-selected", "REMEDIATION_SELECTED", "Candidate reviewer", T.remediation));
++  return next;
++}
++
++export function presentationBeginRollback(state: PresentationState): PresentationState {
++  requireStatus(state, "REMEDIATION_SELECTED", "Execute rollback");
++  if (state.incident.selectedRemediation !== "ROLLBACK_RELEASE") {
++    throw new Error("Controlled rollback requires the recorded rollback remediation decision.");
++  }
++
++  const next = cloneState(state);
++  next.incident.status = "ROLLING_BACK";
++  next.releases.current.status = "ROLLING_BACK";
++  next.audit.push(audit("presentation-rollback-started", "ROLLBACK_STARTED", "ApplicationOps presentation engine", T.rollbackStarted));
++  return next;
++}
++
++export function presentationCompleteRollback(state: PresentationState): PresentationState {
++  requireStatus(state, "ROLLING_BACK", "Complete rollback");
++  const next = cloneState(state);
++  next.incident.status = "READY_FOR_VALIDATION";
++  next.incident.recoveredRelease = SCENARIO.previousRelease.version;
++  next.incident.application = {
++    serviceHealth: "HEALTHY",
++    activeReleaseVersion: SCENARIO.previousRelease.version,
++    syntheticErrorRate: SCENARIO.recoveredErrorRatePct
++  };
++  next.releases.current.status = "ROLLED_BACK";
++  next.releases.previous.status = "STABLE";
++  next.releases.activeReleaseVersion = SCENARIO.previousRelease.version;
++
++  if (!next.requests.some((request) => request.requestId === SCENARIO.recoveryRequestId)) {
++    next.requests.push({
++      id: "presentation-recovery-request",
++      incidentId: SCENARIO.incidentId,
++      requestId: SCENARIO.recoveryRequestId,
++      method: "POST",
++      path: "/transactions/process",
++      responseStatus: 200,
++      durationMs: 1210,
++      releaseVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: T.recovery
++    });
++  }
++  if (!next.transactions.some((transaction) => transaction.id === SCENARIO.recoveryTransactionId)) {
++    next.transactions.push({
++      id: SCENARIO.recoveryTransactionId,
++      incidentId: SCENARIO.incidentId,
++      requestId: SCENARIO.recoveryRequestId,
++      status: "SUCCEEDED",
++      applicationVersion: SCENARIO.previousRelease.version,
++      failureCode: null,
++      createdAt: T.recovery
++    });
++  }
++  if (!next.logs.some((log) => log.id === "presentation-recovery-log")) {
++    next.logs.push({
++      id: "presentation-recovery-log",
++      incidentId: SCENARIO.incidentId,
++      timestamp: T.recovery,
++      level: "INFO",
++      requestId: SCENARIO.recoveryRequestId,
++      service: SCENARIO.serviceName,
++      message: `Synthetic recovery transaction ${SCENARIO.recoveryTransactionId} succeeded on release ${SCENARIO.previousRelease.version}.`
++    });
++  }
++  next.audit.push(audit("presentation-rollback-completed", "ROLLBACK_COMPLETED", "ApplicationOps presentation engine", T.rollbackCompleted));
++  return next;
++}
++
++export function presentationRunValidation(state: PresentationState): PresentationState {
++  requireStatus(state, "READY_FOR_VALIDATION", "Run validation");
++  const evidence = deriveRecoveryValidationEvidence(state);
++  if (recoveryEvidencePassCount(evidence) !== 4) {
++    throw new Error("Recovery validation requires all four synthetic evidence checks to pass.");
++  }
++
++  const next = cloneState(state);
++  next.validation = next.validation.map((check) => ({ ...check, status: "PASS" }));
++  next.incident.status = "VALIDATED";
++  next.audit.push(
++    audit("presentation-validation-started", "VALIDATION_STARTED", "ApplicationOps presentation engine", T.validationStarted),
++    audit("presentation-validation-passed", "VALIDATION_PASSED", "ApplicationOps presentation engine", T.validationPassed)
++  );
++  return next;
++}
++
++export function presentationResolve(state: PresentationState): PresentationState {
++  requireStatus(state, "VALIDATED", "Resolve incident");
++  const handoff = deriveResolutionHandoff({
++    incident: state.incident,
++    releases: state.releases,
++    requests: state.requests,
++    transactions: state.transactions,
++    logs: state.logs,
++    audit: state.audit,
++    validation: state.validation.map((check) => ({
++      id: check.key as "stable-release" | "error-rate" | "synthetic-transaction" | "timeout-errors",
++      label: check.label,
++      required: check.required,
++      status: check.status
++    }))
++  });
++  if (!handoff.ready || !handoff.technicalSummary || !handoff.businessSummary) {
++    throw new Error(`Resolution handoff is not ready: ${handoff.reasons.join(", ") || "unknown reason"}.`);
++  }
++
++  const next = cloneState(state);
++  next.incident.status = "RESOLVED";
++  next.incident.closureTechnicalSummary = handoff.technicalSummary;
++  next.incident.closureBusinessSummary = handoff.businessSummary;
++  next.audit.push(
++    audit("presentation-resolution-handoff", "RESOLUTION_HANDOFF_CREATED", "ApplicationOps presentation engine", T.handoff),
++    audit("presentation-incident-resolved", "INCIDENT_RESOLVED", "Candidate reviewer", T.resolved)
++  );
++  return next;
++}
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/package.json /mnt/data/applicationops-candidate-demo-pass14/package.json
+--- /mnt/data/applicationops-candidate-demo-pass13/package.json	2026-09-03 10:17:40.022004043 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/package.json	2026-09-03 10:35:07.979014378 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "applicationops-candidate-demo",
+-  "version": "0.13.0",
++  "version": "0.14.0",
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+@@ -29,7 +29,8 @@
+     "pass10:gate": "python3 scripts/pass10_remediation_decision_gate.py",
+     "pass11:gate": "python3 scripts/pass11_rollback_recovery_gate.py",
+     "pass12:gate": "python3 scripts/pass12_recovery_validation_gate.py",
+-    "pass13:gate": "python3 scripts/pass13_resolution_handoff_gate.py"
++    "pass13:gate": "python3 scripts/pass13_resolution_handoff_gate.py",
++    "pass14:gate": "python3 scripts/pass14_presentation_mode_gate.py"
+   },
+   "dependencies": {
+     "@prisma/client": "6.19.0",
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/scripts/pass14_presentation_mode_gate.py /mnt/data/applicationops-candidate-demo-pass14/scripts/pass14_presentation_mode_gate.py
+--- /mnt/data/applicationops-candidate-demo-pass13/scripts/pass14_presentation_mode_gate.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/scripts/pass14_presentation_mode_gate.py	2026-09-03 10:35:30.260047466 +0000
+@@ -0,0 +1,73 @@
++from pathlib import Path
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++checks = []
++
++def check(name: str, condition: bool):
++    checks.append((name, bool(condition)))
++
++provider = (ROOT / "components/guided-workflow-provider.tsx").read_text()
++presentation = (ROOT / "lib/presentation/presentation-state.ts").read_text()
++banner = (ROOT / "components/presentation-mode-banner.tsx").read_text()
++page = (ROOT / "app/page.tsx").read_text()
++pkg = (ROOT / "package.json").read_text()
++env = (ROOT / ".env.example").read_text()
++test = (ROOT / "tests/unit/presentation-state.test.ts").read_text()
++
++check("presentation state module exists", (ROOT / "lib/presentation/presentation-state.ts").exists())
++check("presentation banner exists", (ROOT / "components/presentation-mode-banner.tsx").exists())
++check("presentation unit test exists", (ROOT / "tests/unit/presentation-state.test.ts").exists())
++check("runtime defaults to presentation", '=== "server" ? "server" : "presentation"' in provider)
++check("server mode remains optional", 'NEXT_PUBLIC_APPLICATIONOPS_RUNTIME' in provider and '"server"' in provider)
++check("presentation provider has no Prisma import", "@prisma" not in provider and "prisma" not in provider.lower())
++check("presentation state has no Prisma import", "@prisma" not in presentation and "DATABASE_URL" not in presentation)
++check("presentation state has no fetch", "fetch(" not in presentation)
++check("initial synthetic state factory", "createPresentationState" in presentation)
++check("investigation transition", "presentationStartInvestigation" in presentation)
++check("root cause transition", "presentationConfirmRegression" in presentation)
++check("remediation transition", "presentationRecordRemediation" in presentation)
++check("rollback start transition", "presentationBeginRollback" in presentation)
++check("rollback completion transition", "presentationCompleteRollback" in presentation)
++check("validation transition", "presentationRunValidation" in presentation)
++check("resolution transition", "presentationResolve" in presentation)
++check("presentation remediation rejects unsupported", 'action !== "ROLLBACK_RELEASE"' in presentation)
++check("presentation rollback writes recovery request", "recoveryRequestId" in presentation and "responseStatus: 200" in presentation)
++check("presentation rollback writes recovery transaction", "recoveryTransactionId" in presentation and 'status: "SUCCEEDED"' in presentation)
++check("presentation recovery restores stable release", 'serviceHealth: "HEALTHY"' in presentation and 'status = "ROLLED_BACK"' in presentation)
++check("validation derives evidence", "deriveRecoveryValidationEvidence" in presentation)
++check("validation requires 4 of 4", "recoveryEvidencePassCount(evidence) !== 4" in presentation)
++check("resolution derives handoff", "deriveResolutionHandoff" in presentation)
++check("resolution creates technical summary", "closureTechnicalSummary" in presentation)
++check("resolution creates business summary", "closureBusinessSummary" in presentation)
++check("presentation reset factory used", "setPresentationState(createPresentationState())" in provider)
++check("presentation primary path avoids API calls", "runPresentationPrimaryAction" in provider)
++check("presentation remediation path avoids API calls", "presentationRecordRemediation(presentationState, action)" in provider)
++check("presentation rollback shows intermediate state", "presentationBeginRollback" in provider and "await wait(420)" in provider)
++check("presentation validation invokes local engine", "presentationRunValidation" in provider)
++check("presentation resolution invokes local engine", "presentationResolve" in provider)
++check("banner explicitly says browser state", "entirely in the browser" in banner)
++check("banner explicitly says no PostgreSQL runtime", "does not require PostgreSQL" in banner)
++check("banner separates repository DB implementation", "database-backed implementation" in banner)
++check("page renders presentation banner", "<PresentationModeBanner />" in page)
++check("env example documents presentation default", "Recruiter live demo mode is the default" in env)
++check("env example documents optional server mode", 'NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="server"' in env)
++check("package version is pass14", '"version": "0.14.0"' in pkg)
++check("package exposes pass14 gate", '"pass14:gate"' in pkg)
++check("unit test covers full resolution", 'expect(state.incident.status).toBe("RESOLVED")' in test)
++check("unit test covers reset determinism", "toEqual(first)" in test)
++check("candidate disclaimer retained", "CandidateDisclaimer" in page)
++check("5-step controller retained", "Step ${step} of 5" in (ROOT / "components/guided-controller.tsx").read_text())
++check("PASS 15 script not created", not (ROOT / "scripts/pass15_ci_repo_hardening_gate.py").exists())
++check("PASS 15 report not created", not (ROOT / "PASS_15_REPORT.md").exists())
++
++failed = [name for name, ok in checks if not ok]
++for name, ok in checks:
++    print(f"{'PASS' if ok else 'FAIL'} {name}")
++print(f"\nchecks={len(checks)}")
++print(f"passed={len(checks)-len(failed)}")
++print(f"failed={len(failed)}")
++if failed:
++    print("PASS14_PRESENTATION_MODE_GATE_FAIL")
++    sys.exit(1)
++print("PASS14_PRESENTATION_MODE_GATE_PASS")
+diff -ruN /mnt/data/applicationops-candidate-demo-pass13/tests/unit/presentation-state.test.ts /mnt/data/applicationops-candidate-demo-pass14/tests/unit/presentation-state.test.ts
+--- /mnt/data/applicationops-candidate-demo-pass13/tests/unit/presentation-state.test.ts	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/applicationops-candidate-demo-pass14/tests/unit/presentation-state.test.ts	2026-09-03 10:35:06.964315996 +0000
+@@ -0,0 +1,65 @@
++import { describe, expect, it } from "vitest";
++
++import { SCENARIO } from "@/lib/data/synthetic-scenario";
++import {
++  createPresentationState,
++  presentationBeginRollback,
++  presentationCompleteRollback,
++  presentationConfirmRegression,
++  presentationRecordRemediation,
++  presentationResolve,
++  presentationRunValidation,
++  presentationStartInvestigation
++} from "@/lib/presentation/presentation-state";
++
++describe("recruiter presentation mode", () => {
++  it("runs the deterministic five-step workflow without a database", () => {
++    let state = createPresentationState();
++    expect(state.incident.status).toBe("OPEN");
++
++    state = presentationStartInvestigation(state);
++    expect(state.incident.status).toBe("INVESTIGATING");
++
++    state = presentationConfirmRegression(state);
++    expect(state.incident.status).toBe("REGRESSION_CONFIRMED");
++    expect(state.incident.rootCauseCode).toBe("RELEASE_TIMEOUT_REGRESSION");
++
++    state = presentationRecordRemediation(state, "ROLLBACK_RELEASE");
++    expect(state.incident.status).toBe("REMEDIATION_SELECTED");
++
++    state = presentationBeginRollback(state);
++    expect(state.incident.status).toBe("ROLLING_BACK");
++
++    state = presentationCompleteRollback(state);
++    expect(state.incident.status).toBe("READY_FOR_VALIDATION");
++    expect(state.incident.application.activeReleaseVersion).toBe(SCENARIO.previousRelease.version);
++    expect(state.incident.application.serviceHealth).toBe("HEALTHY");
++    expect(state.releases.current.status).toBe("ROLLED_BACK");
++
++    state = presentationRunValidation(state);
++    expect(state.incident.status).toBe("VALIDATED");
++    expect(state.validation.every((check) => check.status === "PASS")).toBe(true);
++
++    state = presentationResolve(state);
++    expect(state.incident.status).toBe("RESOLVED");
++    expect(state.incident.closureTechnicalSummary).toContain("RELEASE_TIMEOUT_REGRESSION");
++    expect(state.incident.closureBusinessSummary).toContain("synthetic");
++    expect(state.audit.at(-1)?.type).toBe("INCIDENT_RESOLVED");
++  });
++
++  it("rejects unsupported remediation and premature transitions", () => {
++    const initial = createPresentationState();
++    expect(() => presentationConfirmRegression(initial)).toThrow();
++
++    const investigating = presentationStartInvestigation(initial);
++    const confirmed = presentationConfirmRegression(investigating);
++    expect(() => presentationRecordRemediation(confirmed, "CHANGE_PRODUCTION_DATA")).toThrow();
++    expect(() => presentationRunValidation(confirmed)).toThrow();
++  });
++
++  it("resets to the same canonical synthetic opening state", () => {
++    const first = createPresentationState();
++    const second = createPresentationState();
++    expect(second).toEqual(first);
++  });
++});

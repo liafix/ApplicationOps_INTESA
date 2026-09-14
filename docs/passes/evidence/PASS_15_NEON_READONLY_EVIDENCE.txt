@@ -1,0 +1,33 @@
+ApplicationOps PASS 15 — Neon read-only evidence
+Checked: 2026-09-06
+
+Target (non-production integration branch only):
+- project: applicationops-candidate-demo
+- project_id: lively-lab-44822886
+- branch: pass15-real-integration
+- branch_id: br-cool-dew-arbi7wvh
+- compute endpoint id: ep-plain-shape-ar1x8bmp
+- database: neondb
+
+Read-only connector SQL result:
+- PostgreSQL server version: 18.6 (c5250a2)
+- current role: neondb_owner
+- ApplicationOps public tables present: 8/8
+  Application, Release, Incident, DiagnosticLog, ApiRequest,
+  SyntheticTransaction, ValidationCheck, AuditEvent
+- Incident closure columns present: 2/2
+  closureTechnicalSummary, closureBusinessSummary
+- public._prisma_migrations: NOT PRESENT
+
+Interpretation:
+The managed PostgreSQL branch is reachable through the Neon connector and the expected
+ApplicationOps schema is present. This is NOT accepted as the required Prisma execution
+proof. The missing _prisma_migrations table also means this observation must not be
+represented as proof that `prisma migrate deploy` ran successfully in this branch.
+No database password or connection string is stored in this evidence file.
+
+Clean Prisma execution target prepared:
+- database: applicationops_pass15_ci
+- initial public table count: 0
+- same dedicated branch/compute only
+- no main/production database modified

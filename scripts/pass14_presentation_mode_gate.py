@@ -1,0 +1,73 @@
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+checks = []
+
+def check(name: str, condition: bool):
+    checks.append((name, bool(condition)))
+
+provider = (ROOT / "components/guided-workflow-provider.tsx").read_text()
+presentation = (ROOT / "lib/presentation/presentation-state.ts").read_text()
+banner = (ROOT / "components/presentation-mode-banner.tsx").read_text()
+page = (ROOT / "app/page.tsx").read_text()
+pkg = (ROOT / "package.json").read_text()
+env = (ROOT / ".env.example").read_text()
+test = (ROOT / "tests/unit/presentation-state.test.ts").read_text()
+
+check("presentation state module exists", (ROOT / "lib/presentation/presentation-state.ts").exists())
+check("presentation banner exists", (ROOT / "components/presentation-mode-banner.tsx").exists())
+check("presentation unit test exists", (ROOT / "tests/unit/presentation-state.test.ts").exists())
+check("runtime defaults to presentation", '=== "server" ? "server" : "presentation"' in provider)
+check("server mode remains optional", 'NEXT_PUBLIC_APPLICATIONOPS_RUNTIME' in provider and '"server"' in provider)
+check("presentation provider has no Prisma import", "@prisma" not in provider and "prisma" not in provider.lower())
+check("presentation state has no Prisma import", "@prisma" not in presentation and "DATABASE_URL" not in presentation)
+check("presentation state has no fetch", "fetch(" not in presentation)
+check("initial synthetic state factory", "createPresentationState" in presentation)
+check("investigation transition", "presentationStartInvestigation" in presentation)
+check("root cause transition", "presentationConfirmRegression" in presentation)
+check("remediation transition", "presentationRecordRemediation" in presentation)
+check("rollback start transition", "presentationBeginRollback" in presentation)
+check("rollback completion transition", "presentationCompleteRollback" in presentation)
+check("validation transition", "presentationRunValidation" in presentation)
+check("resolution transition", "presentationResolve" in presentation)
+check("presentation remediation rejects unsupported", 'action !== "ROLLBACK_RELEASE"' in presentation)
+check("presentation rollback writes recovery request", "recoveryRequestId" in presentation and "responseStatus: 200" in presentation)
+check("presentation rollback writes recovery transaction", "recoveryTransactionId" in presentation and 'status: "SUCCEEDED"' in presentation)
+check("presentation recovery restores stable release", 'serviceHealth: "HEALTHY"' in presentation and 'status = "ROLLED_BACK"' in presentation)
+check("validation derives evidence", "deriveRecoveryValidationEvidence" in presentation)
+check("validation requires 4 of 4", "recoveryEvidencePassCount(evidence) !== 4" in presentation)
+check("resolution derives handoff", "deriveResolutionHandoff" in presentation)
+check("resolution creates technical summary", "closureTechnicalSummary" in presentation)
+check("resolution creates business summary", "closureBusinessSummary" in presentation)
+check("presentation reset factory used", "setPresentationState(createPresentationState())" in provider)
+check("presentation primary path avoids API calls", "runPresentationPrimaryAction" in provider)
+check("presentation remediation path avoids API calls", "presentationRecordRemediation(presentationState, action)" in provider)
+check("presentation rollback shows intermediate state", "presentationBeginRollback" in provider and "await wait(420)" in provider)
+check("presentation validation invokes local engine", "presentationRunValidation" in provider)
+check("presentation resolution invokes local engine", "presentationResolve" in provider)
+check("banner explicitly says browser state", "entirely in the browser" in banner)
+check("banner explicitly says no PostgreSQL runtime", "does not require PostgreSQL" in banner)
+check("banner separates repository DB implementation", "database-backed implementation" in banner)
+check("page renders presentation banner", "<PresentationModeBanner />" in page)
+check("env example documents presentation default", "Recruiter live demo mode is the default" in env)
+check("env example documents optional server mode", 'NEXT_PUBLIC_APPLICATIONOPS_RUNTIME="server"' in env)
+check("package version is pass14", '"version": "0.14.0"' in pkg)
+check("package exposes pass14 gate", '"pass14:gate"' in pkg)
+check("unit test covers full resolution", 'expect(state.incident.status).toBe("RESOLVED")' in test)
+check("unit test covers reset determinism", "toEqual(first)" in test)
+check("candidate disclaimer retained", "CandidateDisclaimer" in page)
+check("5-step controller retained", "Step ${step} of 5" in (ROOT / "components/guided-controller.tsx").read_text())
+check("PASS 15 script not created", not (ROOT / "scripts/pass15_ci_repo_hardening_gate.py").exists())
+check("PASS 15 report not created", not (ROOT / "PASS_15_REPORT.md").exists())
+
+failed = [name for name, ok in checks if not ok]
+for name, ok in checks:
+    print(f"{'PASS' if ok else 'FAIL'} {name}")
+print(f"\nchecks={len(checks)}")
+print(f"passed={len(checks)-len(failed)}")
+print(f"failed={len(failed)}")
+if failed:
+    print("PASS14_PRESENTATION_MODE_GATE_FAIL")
+    sys.exit(1)
+print("PASS14_PRESENTATION_MODE_GATE_PASS")

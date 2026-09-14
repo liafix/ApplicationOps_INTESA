@@ -1,0 +1,18 @@
+Only in /mnt/data/applicationops-candidate-demo-pass7: PASS_7_GATE_OUTPUT.txt
+Only in /mnt/data/applicationops-candidate-demo-pass7: PASS_7_REPORT.md
+Only in /mnt/data/applicationops-candidate-demo-pass7: PASS_7_SCOPE_DIFF.txt
+Only in /mnt/data/applicationops-candidate-demo-pass7: PASS_7_UI_TS_COMPILE_OUTPUT.txt
+Only in /mnt/data/applicationops-candidate-demo-pass7: PASS_7_WORKFLOW_SMOKE_OUTPUT.txt
+Files /mnt/data/applicationops-candidate-demo-pass6-ui-audit-hardened/README.md and /mnt/data/applicationops-candidate-demo-pass7/README.md differ
+Files /mnt/data/applicationops-candidate-demo-pass6-ui-audit-hardened/app/page.tsx and /mnt/data/applicationops-candidate-demo-pass7/app/page.tsx differ
+Only in /mnt/data/applicationops-candidate-demo-pass7/components: guided-controller.tsx
+Only in /mnt/data/applicationops-candidate-demo-pass7/components: guided-nav.tsx
+Only in /mnt/data/applicationops-candidate-demo-pass7/components: guided-status.tsx
+Only in /mnt/data/applicationops-candidate-demo-pass7/components: guided-workflow-provider.tsx
+Files /mnt/data/applicationops-candidate-demo-pass6-ui-audit-hardened/components/metric-card.tsx and /mnt/data/applicationops-candidate-demo-pass7/components/metric-card.tsx differ
+Only in /mnt/data/applicationops-candidate-demo-pass7/components: progressive-gate.tsx
+Files /mnt/data/applicationops-candidate-demo-pass6-ui-audit-hardened/components/workflow-preview.tsx and /mnt/data/applicationops-candidate-demo-pass7/components/workflow-preview.tsx differ
+Only in /mnt/data/applicationops-candidate-demo-pass7/lib: ui
+Files /mnt/data/applicationops-candidate-demo-pass6-ui-audit-hardened/package.json and /mnt/data/applicationops-candidate-demo-pass7/package.json differ
+Only in /mnt/data/applicationops-candidate-demo-pass7/scripts: pass7_guided_interaction_gate.py
+Only in /mnt/data/applicationops-candidate-demo-pass7/tests/unit: guided-workflow.test.ts

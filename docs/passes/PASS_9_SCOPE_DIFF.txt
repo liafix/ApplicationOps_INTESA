@@ -1,0 +1,16 @@
+PASS 9 scope diff versus PASS 8
+
+ADDED
++ components/diagnostic-correlation.tsx
++ lib/ui/diagnostic-correlation.ts
++ scripts/pass9_correlation_smoke.ts
++ scripts/pass9_diagnostic_correlation_gate.py
++ tests/unit/diagnostic-correlation.test.ts
+
+CHANGED
+~ README.md
+~ app/page.tsx
+~ components/guided-workflow-provider.tsx
+~ package.json
+
+REMOVED

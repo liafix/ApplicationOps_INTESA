@@ -1,0 +1,11 @@
+ApplicationOps PASS 15 lockfile regeneration evidence
+Checked: 2026-09-06
+Runtime: Node v22.16.0 / npm 10.9.2
+
+A package-lock-only npm regeneration was attempted only after the repository was reconciled
+to the checkpointed dependency versions. The sandbox had already returned EAI_AGAIN for
+registry.npmjs.org, and the regeneration command did not complete within the sandbox execution
+window. No package-lock.json was created.
+
+Classification: NETWORK GATE BLOCKED.
+This is not a dependency-vulnerability finding and not a successful lockfile generation.
