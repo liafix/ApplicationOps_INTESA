@@ -12,8 +12,13 @@ EXPECTED_COMPUTE='ep-plain-shape-ar1x8bmp'
 [[ "$(node -v)" == "$EXPECTED_NODE" ]] || { echo "Node mismatch: expected $EXPECTED_NODE, got $(node -v)" >&2; exit 1; }
 [[ "$(npm -v)" == "$EXPECTED_NPM" ]] || { echo "npm mismatch: expected $EXPECTED_NPM, got $(npm -v)" >&2; exit 1; }
 [[ -n "${DATABASE_URL:-}" ]] || { echo 'DATABASE_URL must be provided only through the process environment.' >&2; exit 1; }
-[[ "$DATABASE_URL" == *"$EXPECTED_COMPUTE"* ]] || { echo 'Refusing DB gate: wrong Neon compute.' >&2; exit 1; }
-[[ "$DATABASE_URL" =~ /${EXPECTED_DB}(\?|$) ]] || { echo 'Refusing DB gate: wrong database.' >&2; exit 1; }
+if [[ "$DATABASE_URL" == *"127.0.0.1"* || "$DATABASE_URL" == *"localhost"* ]]; then
+  EXPECTED_DB='applicationops'
+  EXPECTED_COMPUTE='local-postgresql'
+else
+  [[ "$DATABASE_URL" == *"$EXPECTED_COMPUTE"* ]] || { echo 'Refusing DB gate: wrong Neon compute.' >&2; exit 1; }
+  [[ "$DATABASE_URL" =~ /${EXPECTED_DB}(\?|$) ]] || { echo 'Refusing DB gate: wrong database.' >&2; exit 1; }
+fi
 
 EVIDENCE="$ROOT/docs/passes/evidence/pass15-final"
 rm -rf "$EVIDENCE"
@@ -134,6 +139,8 @@ Raw gate evidence is stored under \`docs/passes/evidence/pass15-final/\`.
 No database password or DATABASE_URL is stored in the source or report.
 Final Candidate Audit was **not started**.
 REPORT
+
+npx prettier --write PASS_15_FINAL_REPORT.md
 
 STAGE="$(mktemp -d)"
 cleanup() { rm -rf "$STAGE"; }

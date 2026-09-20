@@ -42,10 +42,16 @@ async function assertPersistedScenarioInvariants(client: DatabaseClient): Promis
   if (application.releases.length !== 2) {
     throw new PersistenceInvariantError("Exactly two releases must be persisted.");
   }
-  const previous = application.releases.find((release) => release.version === SCENARIO.previousRelease.version);
-  const current = application.releases.find((release) => release.version === SCENARIO.currentRelease.version);
+  const previous = application.releases.find(
+    (release) => release.version === SCENARIO.previousRelease.version
+  );
+  const current = application.releases.find(
+    (release) => release.version === SCENARIO.currentRelease.version
+  );
   if (previous?.status !== "STABLE" || current?.status !== "DEGRADED") {
-    throw new PersistenceInvariantError("Persisted release pair violates the initial domain invariant.");
+    throw new PersistenceInvariantError(
+      "Persisted release pair violates the initial domain invariant."
+    );
   }
 
   const incident = application.incidents[0];
@@ -59,17 +65,23 @@ async function assertPersistedScenarioInvariants(client: DatabaseClient): Promis
     incident.closureTechnicalSummary !== null ||
     incident.closureBusinessSummary !== null
   ) {
-    throw new PersistenceInvariantError("Reset incident contains progressed workflow or closure state.");
+    throw new PersistenceInvariantError(
+      "Reset incident contains progressed workflow or closure state."
+    );
   }
 
   const validationKeys = incident.validationChecks.map((check) => check.key);
   if (validationKeys.length !== REQUIRED_VALIDATION_DEFINITIONS.length) {
-    throw new PersistenceInvariantError("Persisted validation gate does not contain exactly four canonical checks.");
+    throw new PersistenceInvariantError(
+      "Persisted validation gate does not contain exactly four canonical checks."
+    );
   }
   for (const definition of REQUIRED_VALIDATION_DEFINITIONS) {
     const matches = incident.validationChecks.filter((check) => check.key === definition.id);
     if (matches.length !== 1 || matches[0].required !== true || matches[0].status !== "PENDING") {
-      throw new PersistenceInvariantError(`Persisted validation check ${definition.id} is invalid.`);
+      throw new PersistenceInvariantError(
+        `Persisted validation check ${definition.id} is invalid.`
+      );
     }
   }
 

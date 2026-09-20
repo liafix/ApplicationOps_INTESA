@@ -58,7 +58,9 @@ export function buildReleasePairState(input: {
     currentReleaseStatus: input.currentRelease.status,
     previousReleaseStatus: input.previousRelease.status,
     activeRelease:
-      input.applicationActiveReleaseVersion === input.currentRelease.version ? "CURRENT" : "PREVIOUS"
+      input.applicationActiveReleaseVersion === input.currentRelease.version
+        ? "CURRENT"
+        : "PREVIOUS"
   };
 }
 

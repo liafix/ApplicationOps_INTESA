@@ -17,7 +17,9 @@ const rootCause = assessRootCause({
 
 describe("remediation rules", () => {
   it("recommends a controlled rollback for confirmed regression", () => {
-    const rollback = remediationOptions(rootCause).find((item) => item.action === "ROLLBACK_RELEASE");
+    const rollback = remediationOptions(rootCause).find(
+      (item) => item.action === "ROLLBACK_RELEASE"
+    );
     expect(rollback).toMatchObject({ recommended: true, risk: "MEDIUM" });
   });
 

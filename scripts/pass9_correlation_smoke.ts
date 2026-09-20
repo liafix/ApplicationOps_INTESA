@@ -10,33 +10,72 @@ const expected = {
 };
 
 const logs = [
-  { id: "deploy", timestamp: "2026-09-02T07:30:00.000Z", level: "INFO" as const, requestId: null, service: "Transaction Processing Service", message: "Release 2.8.0 deployment completed." },
-  { id: "started", timestamp: "2026-09-02T07:32:10.000Z", level: "INFO" as const, requestId: expected.requestId, service: "Transaction Processing Service", message: "POST /transactions/process started on release 2.8.0." },
-  { id: "latency", timestamp: "2026-09-02T07:32:11.437Z", level: "WARN" as const, requestId: expected.requestId, service: "Transaction Processing Service", message: "Observed downstream latency 1437ms exceeds configured timeout 800ms." },
-  { id: "timeout", timestamp: "2026-09-02T07:32:11.437Z", level: "ERROR" as const, requestId: expected.requestId, service: "Transaction Processing Service", message: "UPSTREAM_TIMEOUT · HTTP 504." },
-  { id: "tx", timestamp: "2026-09-02T07:32:11.437Z", level: "ERROR" as const, requestId: expected.requestId, service: "Transaction Processing Service", message: "Synthetic transaction TX-90842 processing failed." }
+  {
+    id: "deploy",
+    timestamp: "2026-09-02T07:30:00.000Z",
+    level: "INFO" as const,
+    requestId: null,
+    service: "Transaction Processing Service",
+    message: "Release 2.8.0 deployment completed."
+  },
+  {
+    id: "started",
+    timestamp: "2026-09-02T07:32:10.000Z",
+    level: "INFO" as const,
+    requestId: expected.requestId,
+    service: "Transaction Processing Service",
+    message: "POST /transactions/process started on release 2.8.0."
+  },
+  {
+    id: "latency",
+    timestamp: "2026-09-02T07:32:11.437Z",
+    level: "WARN" as const,
+    requestId: expected.requestId,
+    service: "Transaction Processing Service",
+    message: "Observed downstream latency 1437ms exceeds configured timeout 800ms."
+  },
+  {
+    id: "timeout",
+    timestamp: "2026-09-02T07:32:11.437Z",
+    level: "ERROR" as const,
+    requestId: expected.requestId,
+    service: "Transaction Processing Service",
+    message: "UPSTREAM_TIMEOUT · HTTP 504."
+  },
+  {
+    id: "tx",
+    timestamp: "2026-09-02T07:32:11.437Z",
+    level: "ERROR" as const,
+    requestId: expected.requestId,
+    service: "Transaction Processing Service",
+    message: "Synthetic transaction TX-90842 processing failed."
+  }
 ];
 
-const requests = [{
-  id: "api-request-failed-1",
-  requestId: expected.requestId,
-  method: "POST",
-  path: "/transactions/process",
-  responseStatus: 504,
-  durationMs: 1437,
-  releaseVersion: "2.8.0",
-  failureCode: "UPSTREAM_TIMEOUT",
-  createdAt: "2026-09-02T07:32:11.437Z"
-}];
+const requests = [
+  {
+    id: "api-request-failed-1",
+    requestId: expected.requestId,
+    method: "POST",
+    path: "/transactions/process",
+    responseStatus: 504,
+    durationMs: 1437,
+    releaseVersion: "2.8.0",
+    failureCode: "UPSTREAM_TIMEOUT",
+    createdAt: "2026-09-02T07:32:11.437Z"
+  }
+];
 
-const transactions = [{
-  id: expected.transactionId,
-  requestId: expected.requestId,
-  status: "FAILED" as const,
-  applicationVersion: "2.8.0",
-  failureCode: "UPSTREAM_TIMEOUT",
-  createdAt: "2026-09-02T07:32:11.437Z"
-}];
+const transactions = [
+  {
+    id: expected.transactionId,
+    requestId: expected.requestId,
+    status: "FAILED" as const,
+    applicationVersion: "2.8.0",
+    failureCode: "UPSTREAM_TIMEOUT",
+    createdAt: "2026-09-02T07:32:11.437Z"
+  }
+];
 
 function assert(condition: unknown, message: string) {
   if (!condition) throw new Error(message);

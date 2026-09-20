@@ -21,27 +21,33 @@ function baseInput(status: "READY_FOR_VALIDATION" | "VALIDATED" = "READY_FOR_VAL
       current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" as const },
       activeReleaseVersion: SCENARIO.previousRelease.version
     },
-    requests: [{
-      requestId: SCENARIO.recoveryRequestId,
-      responseStatus: 200,
-      releaseVersion: SCENARIO.previousRelease.version,
-      failureCode: null,
-      createdAt: after
-    }],
-    transactions: [{
-      id: SCENARIO.recoveryTransactionId,
-      requestId: SCENARIO.recoveryRequestId,
-      status: "SUCCEEDED" as const,
-      applicationVersion: SCENARIO.previousRelease.version,
-      failureCode: null,
-      createdAt: after
-    }],
-    logs: [{
-      timestamp: after,
-      level: "INFO" as const,
-      requestId: SCENARIO.recoveryRequestId,
-      message: "Recovery succeeded"
-    }],
+    requests: [
+      {
+        requestId: SCENARIO.recoveryRequestId,
+        responseStatus: 200,
+        releaseVersion: SCENARIO.previousRelease.version,
+        failureCode: null,
+        createdAt: after
+      }
+    ],
+    transactions: [
+      {
+        id: SCENARIO.recoveryTransactionId,
+        requestId: SCENARIO.recoveryRequestId,
+        status: "SUCCEEDED" as const,
+        applicationVersion: SCENARIO.previousRelease.version,
+        failureCode: null,
+        createdAt: after
+      }
+    ],
+    logs: [
+      {
+        timestamp: after,
+        level: "INFO" as const,
+        requestId: SCENARIO.recoveryRequestId,
+        message: "Recovery succeeded"
+      }
+    ],
     audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }],
     validation: createPendingValidationChecks().map((check) => ({
       id: `validation-${check.id}`,

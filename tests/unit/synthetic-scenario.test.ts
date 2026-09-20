@@ -8,7 +8,9 @@ function normalized(seed: ReturnType<typeof buildSyntheticScenarioSeed>) {
 
 describe("synthetic ApplicationOps scenario", () => {
   it("is deterministic across fresh builds", () => {
-    expect(normalized(buildSyntheticScenarioSeed())).toEqual(normalized(buildSyntheticScenarioSeed()));
+    expect(normalized(buildSyntheticScenarioSeed())).toEqual(
+      normalized(buildSyntheticScenarioSeed())
+    );
   });
 
   it("passes the canonical PASS 2 invariants", () => {
@@ -33,7 +35,13 @@ describe("synthetic ApplicationOps scenario", () => {
 
   it("contains only synthetic identifiers and no bank/customer PII fields", () => {
     const serialized = JSON.stringify(buildSyntheticScenarioSeed()).toLowerCase();
-    for (const forbidden of ["iban", "cardnumber", "accountnumber", "customername", "personalnumber"]) {
+    for (const forbidden of [
+      "iban",
+      "cardnumber",
+      "accountnumber",
+      "customername",
+      "personalnumber"
+    ]) {
       expect(serialized).not.toContain(forbidden);
     }
   });

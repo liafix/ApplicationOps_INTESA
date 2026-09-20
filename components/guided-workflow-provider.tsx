@@ -119,19 +119,29 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const incident = RUNTIME_MODE === "presentation" ? presentationState.incident : serverIncident;
-  const validation = RUNTIME_MODE === "presentation" ? presentationState.validation : serverValidation;
+  const validation =
+    RUNTIME_MODE === "presentation" ? presentationState.validation : serverValidation;
   const releases = RUNTIME_MODE === "presentation" ? presentationState.releases : serverReleases;
   const audit = RUNTIME_MODE === "presentation" ? presentationState.audit : serverAudit;
   const logs = RUNTIME_MODE === "presentation" ? presentationState.logs : serverLogs;
   const requests = RUNTIME_MODE === "presentation" ? presentationState.requests : serverRequests;
-  const transactions = RUNTIME_MODE === "presentation" ? presentationState.transactions : serverTransactions;
+  const transactions =
+    RUNTIME_MODE === "presentation" ? presentationState.transactions : serverTransactions;
 
   const refresh = useCallback(async () => {
     if (RUNTIME_MODE === "presentation") {
       setError(null);
       return;
     }
-    const [nextIncident, nextValidation, nextReleases, nextAudit, nextLogs, nextRequests, nextTransactions] = await Promise.all([
+    const [
+      nextIncident,
+      nextValidation,
+      nextReleases,
+      nextAudit,
+      nextLogs,
+      nextRequests,
+      nextTransactions
+    ] = await Promise.all([
       apiRequest<GuidedIncidentView>(`/api/incidents/${SCENARIO.incidentId}`),
       apiRequest<GuidedValidationView[]>(`/api/incidents/${SCENARIO.incidentId}/validation`),
       apiRequest<GuidedReleasesView>(`/api/incidents/${SCENARIO.incidentId}/releases`),
@@ -161,7 +171,11 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setError(null);
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "Unable to load the database-backed demo state.");
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Unable to load the database-backed demo state."
+          );
         }
       } finally {
         if (!cancelled) setHydrating(false);
@@ -191,7 +205,10 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
         break;
       }
       case 3: {
-        if (presentationState.incident.status !== "REMEDIATION_SELECTED" || presentationState.incident.selectedRemediation !== "ROLLBACK_RELEASE") {
+        if (
+          presentationState.incident.status !== "REMEDIATION_SELECTED" ||
+          presentationState.incident.selectedRemediation !== "ROLLBACK_RELEASE"
+        ) {
           scrollToGuidedTarget("remediation");
           return;
         }
@@ -230,20 +247,29 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
       } else {
         switch (step) {
           case 1:
-            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/investigate`, { method: "POST" });
+            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/investigate`, {
+              method: "POST"
+            });
             break;
           case 2:
-            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/confirm-regression`, { method: "POST" });
+            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/confirm-regression`, {
+              method: "POST"
+            });
             break;
           case 3:
-            if (incident?.status !== "REMEDIATION_SELECTED" || incident.selectedRemediation !== "ROLLBACK_RELEASE") {
+            if (
+              incident?.status !== "REMEDIATION_SELECTED" ||
+              incident.selectedRemediation !== "ROLLBACK_RELEASE"
+            ) {
               scrollToGuidedTarget("remediation");
               return;
             }
             await apiRequest(`/api/incidents/${SCENARIO.incidentId}/rollback`, { method: "POST" });
             break;
           case 4:
-            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, { method: "POST" });
+            await apiRequest(`/api/incidents/${SCENARIO.incidentId}/validation/run`, {
+              method: "POST"
+            });
             break;
           case 5:
             await apiRequest(`/api/incidents/${SCENARIO.incidentId}/resolve`, { method: "POST" });
@@ -264,36 +290,51 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [busy, hydrating, incident?.status, incident?.selectedRemediation, refresh, runPresentationPrimaryAction, step]);
+  }, [
+    busy,
+    hydrating,
+    incident?.status,
+    incident?.selectedRemediation,
+    refresh,
+    runPresentationPrimaryAction,
+    step
+  ]);
 
-  const submitRemediationDecision = useCallback(async (action: RemediationAction) => {
-    if (busy || hydrating) return;
-    setBusy(true);
-    setError(null);
-    try {
-      if (RUNTIME_MODE === "presentation") {
-        setPresentationState(presentationRecordRemediation(presentationState, action));
-      } else {
-        await apiRequest(`/api/incidents/${SCENARIO.incidentId}/remediation`, {
-          method: "POST",
-          body: JSON.stringify({ action })
-        });
-        await refresh();
-      }
-      scrollToGuidedTarget("remediation");
-    } catch (caught) {
-      if (RUNTIME_MODE === "server") {
-        try {
+  const submitRemediationDecision = useCallback(
+    async (action: RemediationAction) => {
+      if (busy || hydrating) return;
+      setBusy(true);
+      setError(null);
+      try {
+        if (RUNTIME_MODE === "presentation") {
+          setPresentationState(presentationRecordRemediation(presentationState, action));
+        } else {
+          await apiRequest(`/api/incidents/${SCENARIO.incidentId}/remediation`, {
+            method: "POST",
+            body: JSON.stringify({ action })
+          });
           await refresh();
-        } catch {
-          // Preserve the decision error as the primary feedback.
         }
+        scrollToGuidedTarget("remediation");
+      } catch (caught) {
+        if (RUNTIME_MODE === "server") {
+          try {
+            await refresh();
+          } catch {
+            // Preserve the decision error as the primary feedback.
+          }
+        }
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "The remediation decision could not be recorded."
+        );
+      } finally {
+        setBusy(false);
       }
-      setError(caught instanceof Error ? caught.message : "The remediation decision could not be recorded.");
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, hydrating, presentationState, refresh]);
+    },
+    [busy, hydrating, presentationState, refresh]
+  );
 
   const resetDemo = useCallback(async () => {
     if (busy) return;
@@ -340,7 +381,23 @@ export function GuidedWorkflowProvider({ children }: { children: ReactNode }) {
       resetDemo,
       refresh
     }),
-    [incident, validation, releases, audit, logs, requests, transactions, step, busy, hydrating, error, runPrimaryAction, submitRemediationDecision, resetDemo, refresh]
+    [
+      incident,
+      validation,
+      releases,
+      audit,
+      logs,
+      requests,
+      transactions,
+      step,
+      busy,
+      hydrating,
+      error,
+      runPrimaryAction,
+      submitRemediationDecision,
+      resetDemo,
+      refresh
+    ]
   );
 
   return <GuidedWorkflowContext.Provider value={value}>{children}</GuidedWorkflowContext.Provider>;

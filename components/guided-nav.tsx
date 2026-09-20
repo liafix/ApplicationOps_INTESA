@@ -16,12 +16,21 @@ const links = [
 export function GuidedNav() {
   const { step } = useGuidedWorkflow();
   return (
-    <nav className="sticky top-3 z-20 mt-5 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/90 p-1.5 text-xs text-slate-400 shadow-lg shadow-black/20 backdrop-blur" aria-label="ApplicationOps sections">
-      {links.filter((link) => step >= link.step).map((link) => (
-        <a key={link.href} className="whitespace-nowrap rounded-lg px-3 py-2 hover:bg-slate-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-inset" href={link.href}>
-          {link.label}
-        </a>
-      ))}
+    <nav
+      className="sticky top-3 z-20 mt-5 flex gap-1 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/90 p-1.5 text-xs text-slate-400 shadow-lg shadow-black/20 backdrop-blur"
+      aria-label="ApplicationOps sections"
+    >
+      {links
+        .filter((link) => step >= link.step)
+        .map((link) => (
+          <a
+            key={link.href}
+            className="whitespace-nowrap rounded-lg px-3 py-2 hover:bg-slate-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-inset"
+            href={link.href}
+          >
+            {link.label}
+          </a>
+        ))}
     </nav>
   );
 }

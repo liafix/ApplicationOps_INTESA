@@ -58,8 +58,6 @@ describe("guarded golden-path workflow", () => {
 
   it("blocks validation if canonical checks are incomplete", () => {
     const [one] = createPendingValidationChecks();
-    expect(() =>
-      validateRecovery("READY_FOR_VALIDATION", [{ ...one, status: "PASS" }])
-    ).toThrow();
+    expect(() => validateRecovery("READY_FOR_VALIDATION", [{ ...one, status: "PASS" }])).toThrow();
   });
 });

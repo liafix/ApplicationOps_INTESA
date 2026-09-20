@@ -36,7 +36,9 @@ export interface RecoveryValidationView {
 const POST_VALIDATION_STATES: readonly IncidentStatus[] = ["VALIDATED", "RESOLVED"];
 
 function canonicalValidationState(validation: PersistedValidationCheck[]) {
-  const expected = new Set<string>(REQUIRED_VALIDATION_DEFINITIONS.map((definition) => definition.id));
+  const expected = new Set<string>(
+    REQUIRED_VALIDATION_DEFINITIONS.map((definition) => definition.id)
+  );
   const canonical = validation.filter((check) => expected.has(check.key));
   const keys = canonical.map((check) => check.key);
   const unique = new Set(keys);
@@ -48,9 +50,7 @@ function canonicalValidationState(validation: PersistedValidationCheck[]) {
     REQUIRED_VALIDATION_DEFINITIONS.every((definition) =>
       canonical.some(
         (check) =>
-          check.key === definition.id &&
-          check.required === true &&
-          check.label === definition.label
+          check.key === definition.id && check.required === true && check.label === definition.label
       )
     );
 
@@ -61,7 +61,8 @@ function canonicalValidationState(validation: PersistedValidationCheck[]) {
       canonicalSchemaComplete && canonical.every((check) => check.status === "PENDING"),
     allCanonicalPassed:
       canonicalSchemaComplete && canonical.every((check) => check.status === "PASS"),
-    persistedPassCount: canonical.filter((check) => check.required && check.status === "PASS").length
+    persistedPassCount: canonical.filter((check) => check.required && check.status === "PASS")
+      .length
   };
 }
 
@@ -76,7 +77,11 @@ export function recoveryValidationView(input: RecoveryValidationViewInput): Reco
   let mode: RecoveryValidationMode = "LOCKED";
 
   if (status === "READY_FOR_VALIDATION") {
-    if (!persisted.canonicalSchemaComplete || !persisted.allCanonicalPending || validationPassedAudit) {
+    if (
+      !persisted.canonicalSchemaComplete ||
+      !persisted.allCanonicalPending ||
+      validationPassedAudit
+    ) {
       mode = "INCONSISTENT";
     } else {
       mode = evidencePassCount === 4 ? "READY" : "BLOCKED";

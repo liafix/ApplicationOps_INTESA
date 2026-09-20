@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DomainError,
-  INITIAL_RELEASE_PAIR,
-  completeRollback,
-  startRollback
-} from "@/lib/domain";
+import { DomainError, INITIAL_RELEASE_PAIR, completeRollback, startRollback } from "@/lib/domain";
 
 describe("release rollback state", () => {
   it("moves a valid degraded release into rollback and activates the previous release on completion", () => {

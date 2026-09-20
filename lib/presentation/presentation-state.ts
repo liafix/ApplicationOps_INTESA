@@ -1,7 +1,15 @@
 import { buildSyntheticScenarioSeed, SCENARIO } from "@/lib/data/synthetic-scenario";
 import { assessRootCause } from "@/lib/domain/root-cause";
-import type { IncidentStatus, ReleaseStatus, RemediationAction, ValidationStatus } from "@/lib/domain/types";
-import { deriveRecoveryValidationEvidence, recoveryEvidencePassCount } from "@/lib/evidence/recovery-validation";
+import type {
+  IncidentStatus,
+  ReleaseStatus,
+  RemediationAction,
+  ValidationStatus
+} from "@/lib/domain/types";
+import {
+  deriveRecoveryValidationEvidence,
+  recoveryEvidencePassCount
+} from "@/lib/evidence/recovery-validation";
 import { deriveResolutionHandoff } from "@/lib/evidence/resolution-handoff";
 
 export type PresentationRuntimeMode = "presentation" | "server";
@@ -143,8 +151,12 @@ function cloneState(state: PresentationState): PresentationState {
 
 export function createPresentationState(): PresentationState {
   const seed = buildSyntheticScenarioSeed();
-  const previous = seed.releases.find((release) => release.version === SCENARIO.previousRelease.version)!;
-  const current = seed.releases.find((release) => release.version === SCENARIO.currentRelease.version)!;
+  const previous = seed.releases.find(
+    (release) => release.version === SCENARIO.previousRelease.version
+  )!;
+  const current = seed.releases.find(
+    (release) => release.version === SCENARIO.currentRelease.version
+  )!;
 
   return {
     incident: {
@@ -200,14 +212,22 @@ export function createPresentationState(): PresentationState {
       timestamp: event.timestamp.toISOString()
     })),
     logs: seed.logs.map((log) => ({ ...log, timestamp: log.timestamp.toISOString() })),
-    requests: seed.requests.map((request) => ({ ...request, createdAt: request.createdAt.toISOString() })),
-    transactions: seed.transactions.map((transaction) => ({ ...transaction, createdAt: transaction.createdAt.toISOString() }))
+    requests: seed.requests.map((request) => ({
+      ...request,
+      createdAt: request.createdAt.toISOString()
+    })),
+    transactions: seed.transactions.map((transaction) => ({
+      ...transaction,
+      createdAt: transaction.createdAt.toISOString()
+    }))
   };
 }
 
 function requireStatus(state: PresentationState, expected: IncidentStatus, action: string) {
   if (state.incident.status !== expected) {
-    throw new Error(`${action} requires ${expected}; current presentation state is ${state.incident.status}.`);
+    throw new Error(
+      `${action} requires ${expected}; current presentation state is ${state.incident.status}.`
+    );
   }
 }
 
@@ -215,13 +235,22 @@ export function presentationStartInvestigation(state: PresentationState): Presen
   requireStatus(state, "OPEN", "Start investigation");
   const next = cloneState(state);
   next.incident.status = "INVESTIGATING";
-  next.audit.push(audit("presentation-investigation-started", "INVESTIGATION_STARTED", "Candidate reviewer", T.investigation));
+  next.audit.push(
+    audit(
+      "presentation-investigation-started",
+      "INVESTIGATION_STARTED",
+      "Candidate reviewer",
+      T.investigation
+    )
+  );
   return next;
 }
 
 export function presentationConfirmRegression(state: PresentationState): PresentationState {
   requireStatus(state, "INVESTIGATING", "Evaluate release evidence");
-  const timeoutErrors = state.logs.filter((log) => log.level === "ERROR" && log.message.includes(SCENARIO.failureCode)).length;
+  const timeoutErrors = state.logs.filter(
+    (log) => log.level === "ERROR" && log.message.includes(SCENARIO.failureCode)
+  ).length;
   const assessment = assessRootCause({
     currentTimeoutMs: state.releases.current.downstreamTimeoutMs,
     previousTimeoutMs: state.releases.previous.downstreamTimeoutMs,
@@ -230,7 +259,9 @@ export function presentationConfirmRegression(state: PresentationState): Present
     timeoutErrorCount: timeoutErrors
   });
   if (assessment.code !== "RELEASE_TIMEOUT_REGRESSION" || assessment.confidence !== "HIGH") {
-    throw new Error("The synthetic presentation evidence did not confirm the expected release regression.");
+    throw new Error(
+      "The synthetic presentation evidence did not confirm the expected release regression."
+    );
   }
 
   const next = cloneState(state);
@@ -238,25 +269,47 @@ export function presentationConfirmRegression(state: PresentationState): Present
   next.incident.rootCauseCode = assessment.code;
   next.incident.technicalSummary = assessment.explanation;
   next.audit.push(
-    audit("presentation-release-comparison-reviewed", "RELEASE_COMPARISON_REVIEWED", "Candidate reviewer", T.comparison),
-    audit("presentation-regression-confirmed", "RELEASE_REGRESSION_CONFIRMED", "ApplicationOps presentation engine", T.regression)
+    audit(
+      "presentation-release-comparison-reviewed",
+      "RELEASE_COMPARISON_REVIEWED",
+      "Candidate reviewer",
+      T.comparison
+    ),
+    audit(
+      "presentation-regression-confirmed",
+      "RELEASE_REGRESSION_CONFIRMED",
+      "ApplicationOps presentation engine",
+      T.regression
+    )
   );
   return next;
 }
 
-export function presentationRecordRemediation(state: PresentationState, action: RemediationAction): PresentationState {
+export function presentationRecordRemediation(
+  state: PresentationState,
+  action: RemediationAction
+): PresentationState {
   requireStatus(state, "REGRESSION_CONFIRMED", "Record remediation");
   if (state.incident.rootCauseCode !== "RELEASE_TIMEOUT_REGRESSION") {
     throw new Error("Remediation cannot be recorded before the release regression is confirmed.");
   }
   if (action !== "ROLLBACK_RELEASE") {
-    throw new Error("This synthetic evidence set supports ROLLBACK_RELEASE as the successful remediation path.");
+    throw new Error(
+      "This synthetic evidence set supports ROLLBACK_RELEASE as the successful remediation path."
+    );
   }
 
   const next = cloneState(state);
   next.incident.status = "REMEDIATION_SELECTED";
   next.incident.selectedRemediation = action;
-  next.audit.push(audit("presentation-remediation-selected", "REMEDIATION_SELECTED", "Candidate reviewer", T.remediation));
+  next.audit.push(
+    audit(
+      "presentation-remediation-selected",
+      "REMEDIATION_SELECTED",
+      "Candidate reviewer",
+      T.remediation
+    )
+  );
   return next;
 }
 
@@ -269,7 +322,14 @@ export function presentationBeginRollback(state: PresentationState): Presentatio
   const next = cloneState(state);
   next.incident.status = "ROLLING_BACK";
   next.releases.current.status = "ROLLING_BACK";
-  next.audit.push(audit("presentation-rollback-started", "ROLLBACK_STARTED", "ApplicationOps presentation engine", T.rollbackStarted));
+  next.audit.push(
+    audit(
+      "presentation-rollback-started",
+      "ROLLBACK_STARTED",
+      "ApplicationOps presentation engine",
+      T.rollbackStarted
+    )
+  );
   return next;
 }
 
@@ -323,7 +383,14 @@ export function presentationCompleteRollback(state: PresentationState): Presenta
       message: `Synthetic recovery transaction ${SCENARIO.recoveryTransactionId} succeeded on release ${SCENARIO.previousRelease.version}.`
     });
   }
-  next.audit.push(audit("presentation-rollback-completed", "ROLLBACK_COMPLETED", "ApplicationOps presentation engine", T.rollbackCompleted));
+  next.audit.push(
+    audit(
+      "presentation-rollback-completed",
+      "ROLLBACK_COMPLETED",
+      "ApplicationOps presentation engine",
+      T.rollbackCompleted
+    )
+  );
   return next;
 }
 
@@ -338,8 +405,18 @@ export function presentationRunValidation(state: PresentationState): Presentatio
   next.validation = next.validation.map((check) => ({ ...check, status: "PASS" }));
   next.incident.status = "VALIDATED";
   next.audit.push(
-    audit("presentation-validation-started", "VALIDATION_STARTED", "ApplicationOps presentation engine", T.validationStarted),
-    audit("presentation-validation-passed", "VALIDATION_PASSED", "ApplicationOps presentation engine", T.validationPassed)
+    audit(
+      "presentation-validation-started",
+      "VALIDATION_STARTED",
+      "ApplicationOps presentation engine",
+      T.validationStarted
+    ),
+    audit(
+      "presentation-validation-passed",
+      "VALIDATION_PASSED",
+      "ApplicationOps presentation engine",
+      T.validationPassed
+    )
   );
   return next;
 }
@@ -361,7 +438,9 @@ export function presentationResolve(state: PresentationState): PresentationState
     }))
   });
   if (!handoff.ready || !handoff.technicalSummary || !handoff.businessSummary) {
-    throw new Error(`Resolution handoff is not ready: ${handoff.reasons.join(", ") || "unknown reason"}.`);
+    throw new Error(
+      `Resolution handoff is not ready: ${handoff.reasons.join(", ") || "unknown reason"}.`
+    );
   }
 
   const next = cloneState(state);
@@ -369,7 +448,12 @@ export function presentationResolve(state: PresentationState): PresentationState
   next.incident.closureTechnicalSummary = handoff.technicalSummary;
   next.incident.closureBusinessSummary = handoff.businessSummary;
   next.audit.push(
-    audit("presentation-resolution-handoff", "RESOLUTION_HANDOFF_CREATED", "ApplicationOps presentation engine", T.handoff),
+    audit(
+      "presentation-resolution-handoff",
+      "RESOLUTION_HANDOFF_CREATED",
+      "ApplicationOps presentation engine",
+      T.handoff
+    ),
     audit("presentation-incident-resolved", "INCIDENT_RESOLVED", "Candidate reviewer", T.resolved)
   );
   return next;

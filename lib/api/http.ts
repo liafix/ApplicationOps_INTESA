@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { toApiError } from "./errors";
 
 export function ok<T>(data: T, init?: ResponseInit) {
-  return NextResponse.json({ ok: true, data }, { status: init?.status ?? 200, headers: init?.headers });
+  return NextResponse.json(
+    { ok: true, data },
+    { status: init?.status ?? 200, headers: init?.headers }
+  );
 }
 
 export function noContent() {

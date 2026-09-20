@@ -18,6 +18,7 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 ## Current implementation status
 
 ### PASS 0 — Foundation ✅
+
 - Next.js 15.5.24 + React 19 + TypeScript
 - Tailwind CSS
 - ESLint + Prettier
@@ -30,6 +31,7 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - visible candidate/synthetic-data disclaimer
 
 ### PASS 1 — Domain Engine ✅ + audit hardened
+
 - explicit incident state machine
 - guarded workflow commands for evidence-backed progression
 - guarded release rollback state machine
@@ -40,6 +42,7 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - source tests for positive, negative and bypass paths
 
 ### PASS 2 — Database & Synthetic Scenario ✅
+
 - PostgreSQL/Prisma models for Application, Release, Incident, DiagnosticLog, ApiRequest, SyntheticTransaction, ValidationCheck and AuditEvent
 - enum-backed persisted workflow/release/validation states
 - migration SQL with foreign keys, cascade semantics, uniqueness constraints and access-pattern indexes
@@ -51,8 +54,8 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - seed entrypoint via `npm run db:seed` / `npm run db:reset`
 - unit-test source for deterministic seed, correlation integrity, validation completeness and bypass rejection
 
-
 ### PASS 3 — Guarded API Vertical Slice ✅
+
 - 8 read endpoints for dashboard, incident, logs, requests, transactions, releases, validation and audit
 - 7 POST endpoints for investigate, evidence-backed regression confirmation, remediation selection, rollback, validation, resolution and deterministic reset
 - no generic client-controlled status mutation endpoint
@@ -66,8 +69,8 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - API/domain errors mapped to stable 400/404/409/500 response envelopes
 - source-level tests added for persisted-evidence mapping and validation derivation
 
-
 ### PASS 4 — Database-backed Backend MVP Gate ✅ implementation / conditional runtime gate
+
 - real Prisma/PostgreSQL integration suite added in `tests/integration/applicationops.db.test.ts`
 - 1 complete guarded golden-path test across reset → investigate → confirm regression → remediation → rollback → validation → resolve
 - 6 negative/transactional tests covering early rollback, unsupported remediation, early validation, early resolve, mid-rollback persistence conflict and deterministic reset
@@ -79,6 +82,7 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - full Prisma/PostgreSQL execution remains a release gate because package registry access is unavailable and the connected Neon SQL adapter currently rejects its own argument schema
 
 ### PASS 5 — UI Skeleton ✅
+
 - recruiter-facing single-route operations-console layout
 - visible candidate disclaimer and synthetic-data boundary
 - incident, release, diagnostics, remediation, validation, resolution and audit sections
@@ -86,6 +90,7 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - reusable UI components for disclaimer, metrics, section headings and workflow preview
 
 ### PASS 6 — Above-the-Fold Clarity ✅
+
 - first viewport explains what happened, the reviewer's goal and why evidence-backed closure matters
 - incident snapshot surfaces severity, degraded health, active release, error rate and failure code
 - clear dominant `Review incident ↓` CTA with secondary release-evidence navigation
@@ -93,8 +98,8 @@ The UI visibly discloses Presentation Mode so the live reliability layer is not 
 - release regression is visually explained before raw logs through previous/current release comparison and configuration diff
 - no PASS 7 workflow mutations, API POST actions or client-side guided state were implemented
 
-
 ## Canonical synthetic scenario
+
 - Incident: `APP-2047`
 - Transaction: `TX-90842`
 - Request: `req_tx_8f31`
@@ -133,6 +138,7 @@ npm run db:seed
 `npm run db:reset` executes the same deterministic atomic reset contract as the seed.
 
 ## Safety boundaries
+
 - synthetic data only
 - no real customer, account, card, IBAN or transaction data
 - no connection to Intesa or banking APIs
@@ -179,7 +185,6 @@ Dedicated PASS 9 logs/request/data correlation components were not introduced. S
 
 PASS 9 — Logs, Request & Data Correlation. Full npm/PostgreSQL/build/browser release gates remain pending before publication.
 
-
 ## PASS 9 — Logs + Request + Data Correlation ✅
 
 PASS 9 replaces the static diagnostics shell with a persisted read-only evidence trail. The guided provider now hydrates logs, HTTP requests and synthetic transaction records from the existing API, while `lib/ui/diagnostic-correlation.ts` fail-closes the trail as `COMPLETE`, `PARTIAL` or `MISMATCH`.
@@ -203,7 +208,6 @@ Key boundaries:
 - `ROLLBACK_RELEASE` is recorded through the existing guarded remediation endpoint;
 - the browser does not recompute root cause or mutate incident status directly;
 - rollback execution is intentionally not triggered by the PASS 10 UI. Recovery remains a separate controlled action for the next pass.
-
 
 ## PASS 11 — controlled rollback + recovery
 
@@ -334,7 +338,6 @@ This pass does **not** claim final deployment, full npm dependency verification,
 ### Next phase
 
 PASS 15 — CI & Repository Hardening. Keep Presentation Mode as the default recruiter runtime, then close the dependency/build/test/security gates before public deployment.
-
 
 ## PASS 15 — CI + Repository Hardening
 
