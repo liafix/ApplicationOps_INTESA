@@ -6,7 +6,10 @@ import { useGuidedWorkflow } from "./guided-workflow-provider";
 export function WorkflowPreview() {
   const { step } = useGuidedWorkflow();
   return (
-    <ol className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible" aria-label="ApplicationOps five-step workflow">
+    <ol
+      className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible"
+      aria-label="ApplicationOps five-step workflow"
+    >
       {GUIDED_STEPS.map((item) => {
         const isCurrent = step === item.step;
         const isComplete = step > item.step;

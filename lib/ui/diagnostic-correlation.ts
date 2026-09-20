@@ -128,9 +128,7 @@ export function buildDiagnosticCorrelation(input: {
   );
   const latencyLog = findLog(
     correlatedLogs,
-    (log) =>
-      log.level === "WARN" &&
-      hasText(log.message, `${expected.observedLatencyMs}ms`)
+    (log) => log.level === "WARN" && hasText(log.message, `${expected.observedLatencyMs}ms`)
   );
   const timeoutLog = findLog(
     correlatedLogs,
@@ -165,8 +163,8 @@ export function buildDiagnosticCorrelation(input: {
       "HTTP failure matches the timeout evidence",
       request
         ? request.responseStatus === expected.httpStatus &&
-          request.failureCode === expected.failureCode &&
-          request.durationMs === expected.observedLatencyMs
+            request.failureCode === expected.failureCode &&
+            request.durationMs === expected.observedLatencyMs
         : null,
       request
         ? `HTTP ${request.responseStatus} · ${request.durationMs} ms · ${request.failureCode ?? "NO_CODE"}`
@@ -196,13 +194,16 @@ export function buildDiagnosticCorrelation(input: {
       transaction
         ? transaction.status === "FAILED" && transaction.failureCode === expected.failureCode
         : null,
-      transaction ? `${transaction.status} · ${transaction.failureCode ?? "NO_CODE"}` : expected.failureCode
+      transaction
+        ? `${transaction.status} · ${transaction.failureCode ?? "NO_CODE"}`
+        : expected.failureCode
     ),
     check(
       "request-start-log",
       "Request start log carries the same release context",
       requestStartLog ? true : null,
-      requestStartLog?.message ?? `${expected.requestId} start log for v${expected.releaseVersion} missing`
+      requestStartLog?.message ??
+        `${expected.requestId} start log for v${expected.releaseVersion} missing`
     ),
     check(
       "latency-log",
@@ -237,7 +238,9 @@ export function buildDiagnosticCorrelation(input: {
       key: "DEPLOYMENT",
       label: "Release deployed",
       timestamp: formatTimestamp(deploymentLog?.timestamp),
-      detail: deploymentLog?.message ?? `Deployment marker for v${expected.releaseVersion} is unavailable.`,
+      detail:
+        deploymentLog?.message ??
+        `Deployment marker for v${expected.releaseVersion} is unavailable.`,
       correlation: `release v${expected.releaseVersion}`,
       tone: "neutral"
     },
@@ -255,7 +258,8 @@ export function buildDiagnosticCorrelation(input: {
       key: "LATENCY",
       label: "Latency exceeded the configured boundary",
       timestamp: formatTimestamp(latencyLog?.timestamp),
-      detail: latencyLog?.message ?? `No correlated latency warning was found for ${expected.requestId}.`,
+      detail:
+        latencyLog?.message ?? `No correlated latency warning was found for ${expected.requestId}.`,
       correlation: expected.requestId,
       tone: "warning"
     },
@@ -263,7 +267,9 @@ export function buildDiagnosticCorrelation(input: {
       key: "TIMEOUT",
       label: "Request failed with timeout evidence",
       timestamp: formatTimestamp(timeoutLog?.timestamp),
-      detail: timeoutLog?.message ?? `No ${expected.failureCode} error was found for ${expected.requestId}.`,
+      detail:
+        timeoutLog?.message ??
+        `No ${expected.failureCode} error was found for ${expected.requestId}.`,
       correlation: `${expected.requestId} · v${expected.releaseVersion}`,
       tone: "danger"
     },

@@ -12,7 +12,9 @@ describe("scenario invariant protection", () => {
   it("rejects validation check deletion", () => {
     const seed = buildSyntheticScenarioSeed();
     const invalid = { ...seed, validationChecks: seed.validationChecks.slice(0, 3) };
-    expect(() => assertSyntheticScenarioSeedInvariants(invalid)).toThrow(/canonical validation checks/);
+    expect(() => assertSyntheticScenarioSeedInvariants(invalid)).toThrow(
+      /canonical validation checks/
+    );
   });
 
   it("rejects correlation id drift", () => {

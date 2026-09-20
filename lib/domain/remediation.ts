@@ -8,10 +8,9 @@ export interface RemediationRecommendation {
   explanation: string;
 }
 
-export function remediationOptions(
-  rootCause: RootCauseAssessment
-): RemediationRecommendation[] {
-  const confirmed = rootCause.code === "RELEASE_TIMEOUT_REGRESSION" && rootCause.confidence === "HIGH";
+export function remediationOptions(rootCause: RootCauseAssessment): RemediationRecommendation[] {
+  const confirmed =
+    rootCause.code === "RELEASE_TIMEOUT_REGRESSION" && rootCause.confidence === "HIGH";
 
   return [
     {
@@ -38,7 +37,8 @@ export function remediationOptions(
       action: "ESCALATE_WITHOUT_ACTION",
       recommended: false,
       risk: "LOW",
-      explanation: "Escalation remains a safe fallback when evidence is insufficient or rollback authority is unavailable, but it does not restore service by itself."
+      explanation:
+        "Escalation remains a safe fallback when evidence is insufficient or rollback authority is unavailable, but it does not restore service by itself."
     }
   ];
 }
@@ -72,7 +72,10 @@ export function selectRemediation(
   return action;
 }
 
-export function assertRollbackAllowed(status: IncidentStatus, action: RemediationAction | null): void {
+export function assertRollbackAllowed(
+  status: IncidentStatus,
+  action: RemediationAction | null
+): void {
   if (status !== "REMEDIATION_SELECTED") {
     throw new DomainError(
       "REMEDIATION_NOT_SELECTED",

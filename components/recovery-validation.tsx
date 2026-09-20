@@ -27,14 +27,17 @@ function PersistedStatus({ status }: { status: "PENDING" | "PASS" | "FAIL" }) {
         ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
         : "border-slate-700 bg-slate-900 text-slate-300";
   return (
-    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${tone}`}>
+    <span
+      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${tone}`}
+    >
       {status}
     </span>
   );
 }
 
 export function RecoveryValidation() {
-  const { incident, releases, requests, transactions, logs, audit, validation } = useGuidedWorkflow();
+  const { incident, releases, requests, transactions, logs, audit, validation } =
+    useGuidedWorkflow();
   const view = recoveryValidationView({
     incident,
     releases,
@@ -84,7 +87,9 @@ export function RecoveryValidation() {
       <section className={`rounded-2xl border p-5 ${tone}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Recovery validation gate</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Recovery validation gate
+            </p>
             <h3 className="mt-2 text-lg font-semibold text-white">{title}</h3>
           </div>
           <span className="w-fit rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">
@@ -92,7 +97,9 @@ export function RecoveryValidation() {
           </span>
         </div>
         <p className="mt-3 max-w-4xl text-xs leading-5 text-slate-400">
-          The validation action evaluates the recorded release, service, request, transaction and log evidence, then records the four canonical check results together with the VALIDATED incident transition and validation audit events.
+          The validation action evaluates the recorded release, service, request, transaction and
+          log evidence, then records the four canonical check results together with the VALIDATED
+          incident transition and validation audit events.
         </p>
       </section>
 
@@ -102,12 +109,21 @@ export function RecoveryValidation() {
             const persisted = validation.find((check) => check.key === definition.id);
             const evidenceReady = evidenceByKey[definition.id];
             return (
-              <article key={definition.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+              <article
+                key={definition.id}
+                className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5"
+              >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{definition.id}</p>
-                    <h4 className="mt-1 text-sm font-semibold text-slate-100">{definition.label}</h4>
-                    <p className="mt-2 text-xs leading-5 text-slate-400">{detailByKey[definition.id]}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                      {definition.id}
+                    </p>
+                    <h4 className="mt-1 text-sm font-semibold text-slate-100">
+                      {definition.label}
+                    </h4>
+                    <p className="mt-2 text-xs leading-5 text-slate-400">
+                      {detailByKey[definition.id]}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <EvidenceStatus ok={evidenceReady} />
@@ -121,13 +137,22 @@ export function RecoveryValidation() {
 
         <aside className="space-y-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Evidence readiness</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Evidence readiness
+            </p>
             <p className="mt-2 text-3xl font-semibold text-white">{view.evidencePassCount} / 4</p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">Observed directly from the post-rollback evidence state. This is not yet the authoritative validation result.</p>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              Observed directly from the post-rollback evidence state. This is not yet the
+              authoritative validation result.
+            </p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Recorded validation</p>
-            <p className={`mt-2 text-3xl font-semibold ${view.persistedPassCount === 4 ? "text-emerald-200" : "text-white"}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Recorded validation
+            </p>
+            <p
+              className={`mt-2 text-3xl font-semibold ${view.persistedPassCount === 4 ? "text-emerald-200" : "text-white"}`}
+            >
               {view.persistedPassCount} / 4
             </p>
             <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -137,9 +162,16 @@ export function RecoveryValidation() {
             </p>
           </div>
           <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">Closure boundary</p>
-            <p className="mt-2 text-sm font-semibold text-slate-100">4/4 validated ≠ incident resolved.</p>
-            <p className="mt-2 text-xs leading-5 text-slate-400">A successful validation only unlocks the next workflow stage. Incident resolution remains a separate explicit action.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
+              Closure boundary
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-100">
+              4/4 validated ≠ incident resolved.
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              A successful validation only unlocks the next workflow stage. Incident resolution
+              remains a separate explicit action.
+            </p>
           </div>
         </aside>
       </div>

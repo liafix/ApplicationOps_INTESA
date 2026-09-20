@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, millisecondsBetween, rootCauseDisclosureState } from "@/lib/ui/release-evidence";
+import {
+  formatDuration,
+  millisecondsBetween,
+  rootCauseDisclosureState
+} from "@/lib/ui/release-evidence";
 
 describe("release evidence disclosure", () => {
   it("keeps root-cause evidence locked before investigation starts", () => {
@@ -15,9 +19,15 @@ describe("release evidence disclosure", () => {
   });
 
   it("reveals the confirmation only for the persisted release-regression code", () => {
-    expect(rootCauseDisclosureState("REGRESSION_CONFIRMED", "INSUFFICIENT_EVIDENCE")).toBe("HYPOTHESIS");
-    expect(rootCauseDisclosureState("REGRESSION_CONFIRMED", "RELEASE_TIMEOUT_REGRESSION")).toBe("CONFIRMED");
-    expect(rootCauseDisclosureState("READY_FOR_VALIDATION", "RELEASE_TIMEOUT_REGRESSION")).toBe("CONFIRMED");
+    expect(rootCauseDisclosureState("REGRESSION_CONFIRMED", "INSUFFICIENT_EVIDENCE")).toBe(
+      "HYPOTHESIS"
+    );
+    expect(rootCauseDisclosureState("REGRESSION_CONFIRMED", "RELEASE_TIMEOUT_REGRESSION")).toBe(
+      "CONFIRMED"
+    );
+    expect(rootCauseDisclosureState("READY_FOR_VALIDATION", "RELEASE_TIMEOUT_REGRESSION")).toBe(
+      "CONFIRMED"
+    );
   });
 
   it("formats the canonical deployment-to-incident timing deterministically", () => {

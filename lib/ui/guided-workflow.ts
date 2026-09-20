@@ -32,7 +32,8 @@ export const GUIDED_STEPS: readonly GuidedStepDefinition[] = [
     step: 3,
     title: "Choose a remediation action",
     shortTitle: "Decide",
-    description: "Compare the available responses against the confirmed evidence before any recovery action is executed.",
+    description:
+      "Compare the available responses against the confirmed evidence before any recovery action is executed.",
     actionLabel: "REVIEW REMEDIATION OPTIONS",
     targetId: "remediation"
   },
@@ -73,7 +74,10 @@ export function guidedStepFromIncidentStatus(status: IncidentStatus): GuidedStep
   }
 }
 
-export function isGuidedSectionUnlocked(currentStep: GuidedStep, requiredStep: Exclude<GuidedStep, 6>) {
+export function isGuidedSectionUnlocked(
+  currentStep: GuidedStep,
+  requiredStep: Exclude<GuidedStep, 6>
+) {
   return currentStep >= requiredStep;
 }
 
@@ -93,6 +97,6 @@ export function nextGuidedTargetAfterAction(stepBeforeAction: Exclude<GuidedStep
     case 4:
       return "resolution";
     case 5:
-      return "resolution";
+      return "audit";
   }
 }

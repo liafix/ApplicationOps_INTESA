@@ -57,18 +57,18 @@ The database-backed mode is optional and separate from the recruiter live deploy
 
 ## Canonical synthetic scenario
 
-| Signal | Value |
-| --- | --- |
-| Incident | `APP-2047` |
-| Failed transaction | `TX-90842` |
-| Failed request | `req_tx_8f31` |
-| Stable release | `v2.7.4` |
-| Problem release | `v2.8.0` |
-| Timeout change | `5000 ms → 800 ms` |
-| Observed downstream latency | `1437 ms` |
-| Synthetic error rate | `1.2% → 14.8%` |
-| Failure | `UPSTREAM_TIMEOUT / HTTP 504` |
-| Recovery | rollback to `v2.7.4`, error rate `1.1%`, 4/4 validation |
+| Signal                      | Value                                                   |
+| --------------------------- | ------------------------------------------------------- |
+| Incident                    | `APP-2047`                                              |
+| Failed transaction          | `TX-90842`                                              |
+| Failed request              | `req_tx_8f31`                                           |
+| Stable release              | `v2.7.4`                                                |
+| Problem release             | `v2.8.0`                                                |
+| Timeout change              | `5000 ms → 800 ms`                                      |
+| Observed downstream latency | `1437 ms`                                               |
+| Synthetic error rate        | `1.2% → 14.8%`                                          |
+| Failure                     | `UPSTREAM_TIMEOUT / HTTP 504`                           |
+| Recovery                    | rollback to `v2.7.4`, error rate `1.1%`, 4/4 validation |
 
 ## Repository layout
 
@@ -87,9 +87,11 @@ The database-backed mode is optional and separate from the recruiter live deploy
 The repository distinguishes two claims:
 
 ### Recruiter demo release
+
 Can be independently verified with Node only. It is the default GitHub/Vercel release path.
 
 ### Full engineering runtime
+
 Requires npm registry access, a dependency lockfile, Prisma generation and a PostgreSQL target. Historical evidence and source are preserved, but the public demo does **not** pretend that a browser walkthrough is equivalent to a production banking backend.
 
 ## Candidate value
