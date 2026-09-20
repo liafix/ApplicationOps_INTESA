@@ -65,6 +65,7 @@ echo '== 14-npm-audit =='
 set +e
 npm audit --audit-level=high --json > "$EVIDENCE/14-npm-audit.json" 2> "$EVIDENCE/14-npm-audit.stderr.log"
 audit_rc=$?
+npx prettier --write "$EVIDENCE/14-npm-audit.json" 2>/dev/null || true
 set -e
 if [[ $audit_rc -ne 0 ]]; then
   echo "npm audit failed with exit code $audit_rc; do not interpret this as 0 vulnerabilities." >&2
