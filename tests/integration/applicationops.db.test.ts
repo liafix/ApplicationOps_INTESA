@@ -90,9 +90,7 @@ describe.sequential("ApplicationOps PostgreSQL backend MVP gate", () => {
     expect(previous?.status).toBe("STABLE");
 
     expect(persisted.validationChecks).toHaveLength(4);
-    expect(
-      persisted.validationChecks.every((check) => check.required && check.status === "PASS")
-    ).toBe(true);
+    expect(persisted.validationChecks.every((check) => check.required && check.status === "PASS")).toBe(true);
 
     expect(
       persisted.transactions.some(
@@ -140,9 +138,7 @@ describe.sequential("ApplicationOps PostgreSQL backend MVP gate", () => {
     const persisted = await readSyntheticScenario(prisma);
     expect(persisted?.status).toBe("REGRESSION_CONFIRMED");
     expect(persisted?.selectedRemediation).toBeNull();
-    expect(persisted?.auditEvents.some((event) => event.type === "REMEDIATION_SELECTED")).toBe(
-      false
-    );
+    expect(persisted?.auditEvents.some((event) => event.type === "REMEDIATION_SELECTED")).toBe(false);
   });
 
   it("rejects validation before rollback and leaves all canonical checks pending", async () => {
@@ -161,9 +157,7 @@ describe.sequential("ApplicationOps PostgreSQL backend MVP gate", () => {
     const persisted = await readSyntheticScenario(prisma);
     expect(persisted?.status).toBe("REMEDIATION_SELECTED");
     expect(persisted?.validationChecks.every((check) => check.status === "PENDING")).toBe(true);
-    expect(persisted?.auditEvents.some((event) => event.type.startsWith("VALIDATION_"))).toBe(
-      false
-    );
+    expect(persisted?.auditEvents.some((event) => event.type.startsWith("VALIDATION_"))).toBe(false);
   });
 
   it("rejects resolution before 4/4 persisted validation and writes no resolution audit", async () => {
@@ -175,19 +169,18 @@ describe.sequential("ApplicationOps PostgreSQL backend MVP gate", () => {
     } catch (error) {
       thrown = error;
     }
-    expect(thrown).toBeInstanceOf(ApiError);
-    assertErrorCode(thrown, "RESOLUTION_EVIDENCE_INCOMPLETE");
+    expect(thrown).toBeInstanceOf(DomainError);
+    assertErrorCode(thrown, "VALIDATION_REQUIRED");
 
     const persisted = await readSyntheticScenario(prisma);
     expect(persisted?.status).toBe("READY_FOR_VALIDATION");
     expect(persisted?.validationChecks.every((check) => check.status === "PENDING")).toBe(true);
     expect(persisted?.closureTechnicalSummary).toBeNull();
     expect(persisted?.closureBusinessSummary).toBeNull();
-    expect(
-      persisted?.auditEvents.some((event) => event.type === "RESOLUTION_HANDOFF_CREATED")
-    ).toBe(false);
+    expect(persisted?.auditEvents.some((event) => event.type === "RESOLUTION_HANDOFF_CREATED")).toBe(false);
     expect(persisted?.auditEvents.some((event) => event.type === "INCIDENT_RESOLVED")).toBe(false);
   });
+
 
   it("derives validation from persisted recovery evidence and refuses a tampered recovery request", async () => {
     await progressToReadyForValidation();
@@ -216,14 +209,9 @@ describe.sequential("ApplicationOps PostgreSQL backend MVP gate", () => {
   it("refuses resolution when persisted recovery evidence drifts after validation", async () => {
     await progressToReadyForValidation();
     await runIncidentValidation(SCENARIO.incidentId);
-    await prisma.application.update({
-      where: { id: SCENARIO.applicationId },
-      data: { serviceHealth: "DEGRADED" }
-    });
+    await prisma.application.update({ where: { id: SCENARIO.applicationId }, data: { serviceHealth: "DEGRADED" } });
 
-    await expect(resolveIncident(SCENARIO.incidentId)).rejects.toMatchObject({
-      code: "RESOLUTION_EVIDENCE_INCOMPLETE"
-    });
+    await expect(resolveIncident(SCENARIO.incidentId)).rejects.toMatchObject({ code: "RESOLUTION_EVIDENCE_INCOMPLETE" });
     const persisted = await readSyntheticScenario(prisma);
     expect(persisted?.status).toBe("VALIDATED");
     expect(persisted?.closureTechnicalSummary).toBeNull();

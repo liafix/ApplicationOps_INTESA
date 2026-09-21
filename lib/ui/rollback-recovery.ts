@@ -65,22 +65,14 @@ export interface RollbackRecoveryEvidence {
   recoveryLogPresent: boolean;
 }
 
-const POST_ROLLBACK_STATES: readonly IncidentStatus[] = [
-  "READY_FOR_VALIDATION",
-  "VALIDATED",
-  "RESOLVED"
-];
+const POST_ROLLBACK_STATES: readonly IncidentStatus[] = ["READY_FOR_VALIDATION", "VALIDATED", "RESOLVED"];
 
 export function rollbackRecoveryEvidence(input: RollbackRecoveryInput): RollbackRecoveryEvidence {
   const incident = input.incident;
   const releases = input.releases;
-  const recoveryRequest = input.requests.find(
-    (request) => request.requestId === SCENARIO.recoveryRequestId
-  );
+  const recoveryRequest = input.requests.find((request) => request.requestId === SCENARIO.recoveryRequestId);
   const recoveryTransaction = input.transactions.find(
-    (transaction) =>
-      transaction.id === SCENARIO.recoveryTransactionId &&
-      transaction.requestId === SCENARIO.recoveryRequestId
+    (transaction) => transaction.id === SCENARIO.recoveryTransactionId && transaction.requestId === SCENARIO.recoveryRequestId
   );
   const recoveryLog = input.logs.find(
     (log) =>
@@ -95,11 +87,9 @@ export function rollbackRecoveryEvidence(input: RollbackRecoveryInput): Rollback
     rollbackStarted: input.audit.some((event) => event.type === "ROLLBACK_STARTED"),
     rollbackCompleted: input.audit.some((event) => event.type === "ROLLBACK_COMPLETED"),
     affectedReleaseRolledBack:
-      releases?.current.version === SCENARIO.currentRelease.version &&
-      releases.current.status === "ROLLED_BACK",
+      releases?.current.version === SCENARIO.currentRelease.version && releases.current.status === "ROLLED_BACK",
     previousReleaseStable:
-      releases?.previous.version === SCENARIO.previousRelease.version &&
-      releases.previous.status === "STABLE",
+      releases?.previous.version === SCENARIO.previousRelease.version && releases.previous.status === "STABLE",
     previousReleaseActive:
       releases?.activeReleaseVersion === SCENARIO.previousRelease.version &&
       incident?.application.activeReleaseVersion === SCENARIO.previousRelease.version,
@@ -161,7 +151,7 @@ export function rollbackAfterState(input: RollbackRecoveryInput) {
     errorRatePct: incident?.application.syntheticErrorRate ?? null,
     timeoutMs:
       releases?.activeReleaseVersion === releases?.previous.version
-        ? (releases?.previous.downstreamTimeoutMs ?? null)
+        ? releases?.previous.downstreamTimeoutMs ?? null
         : null
   };
 }

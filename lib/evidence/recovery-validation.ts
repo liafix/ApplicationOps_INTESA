@@ -69,9 +69,7 @@ function timeMs(value: TimeValue): number {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-export function deriveRecoveryValidationEvidence(
-  input: RecoveryValidationInput
-): RecoveryValidationEvidence {
+export function deriveRecoveryValidationEvidence(input: RecoveryValidationInput): RecoveryValidationEvidence {
   const incident = input.incident;
   const releases = input.releases;
   const rollbackCompleted = input.audit

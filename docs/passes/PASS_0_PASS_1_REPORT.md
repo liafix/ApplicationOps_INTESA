@@ -3,7 +3,6 @@
 ## Scope completed
 
 ### PASS 0 — Foundation
-
 - Next.js 15 / React 19 / TypeScript project contract
 - Tailwind CSS configuration
 - ESLint 9 flat config + Prettier
@@ -17,7 +16,6 @@
 - minimal non-polished foundation page
 
 ### PASS 1 — Domain Engine
-
 - explicit incident state machine
 - release rollback state helpers
 - deterministic root-cause assessment
@@ -32,7 +30,6 @@
 The execution environment cannot resolve `registry.npmjs.org` (`EAI_AGAIN`), so dependency installation and therefore full Next.js/Vitest/ESLint/build gates could not be run here.
 
 What was verified locally without external packages:
-
 - domain TypeScript compiled successfully with TypeScript 5.8.3 in strict mode
 - executable Node smoke assertions passed for:
   - valid state transition
@@ -48,14 +45,12 @@ What was verified locally without external packages:
 Result: `DOMAIN_SMOKE_PASS`
 
 ## Deferred by approved implementation plan
-
 - persistence models, migrations, seed/reset: PASS 2
 - API vertical slice: PASS 3
 - DB-backed golden-path integration: PASS 4
 - final UI/presentation mode: later passes
 
 ## Current gate
-
 PASS 0 + PASS 1 implementation is complete at source-code level. Full package/install/build verification remains pending solely because package-registry DNS/network access was unavailable in this execution environment.
 
 ---

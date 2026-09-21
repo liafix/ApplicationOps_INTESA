@@ -20,7 +20,10 @@ export class PersistenceConflictError extends Error {
   }
 }
 
-const BAD_REQUEST_DOMAIN_CODES = new Set(["INVALID_EVIDENCE", "REMEDIATION_NOT_SUPPORTED"]);
+const BAD_REQUEST_DOMAIN_CODES = new Set([
+  "INVALID_EVIDENCE",
+  "REMEDIATION_NOT_SUPPORTED"
+]);
 
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;

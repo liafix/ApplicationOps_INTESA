@@ -19,8 +19,7 @@ export const REMEDIATION_OPTIONS: readonly RemediationOptionPresentation[] = [
     title: "Retry failed transactions",
     risk: "MEDIUM",
     evidenceFit: "WEAK",
-    shortRationale:
-      "A retry may reproduce the same timeout because it does not remove the confirmed release-level configuration regression.",
+    shortRationale: "A retry may reproduce the same timeout because it does not remove the confirmed release-level configuration regression.",
     reviewQuestion: "Would this remove the condition that caused the timeout?",
     executableForScenario: false
   },
@@ -29,8 +28,7 @@ export const REMEDIATION_OPTIONS: readonly RemediationOptionPresentation[] = [
     title: "Change production data",
     risk: "HIGH",
     evidenceFit: "NO_EVIDENCE",
-    shortRationale:
-      "The persisted evidence points to release configuration rather than incorrect transaction data, so a data change would add risk without addressing the observed cause.",
+    shortRationale: "The persisted evidence points to release configuration rather than incorrect transaction data, so a data change would add risk without addressing the observed cause.",
     reviewQuestion: "Is there evidence that transaction data is incorrect?",
     executableForScenario: false
   },
@@ -39,10 +37,8 @@ export const REMEDIATION_OPTIONS: readonly RemediationOptionPresentation[] = [
     title: "Rollback release",
     risk: "MEDIUM",
     evidenceFit: "STRONG",
-    shortRationale:
-      "The previous release is known stable, the regression is tied to the new release configuration and rollback is a controlled reversible response for this synthetic evidence set.",
-    reviewQuestion:
-      "Can we restore the last known-good release before attempting secondary recovery work?",
+    shortRationale: "The previous release is known stable, the regression is tied to the new release configuration and rollback is a controlled reversible response for this synthetic evidence set.",
+    reviewQuestion: "Can we restore the last known-good release before attempting secondary recovery work?",
     executableForScenario: true
   },
   {
@@ -50,8 +46,7 @@ export const REMEDIATION_OPTIONS: readonly RemediationOptionPresentation[] = [
     title: "Escalate without action",
     risk: "LOW",
     evidenceFit: "FALLBACK",
-    shortRationale:
-      "Escalation is appropriate when authority or evidence is insufficient, but it does not itself restore the degraded service in this scenario.",
+    shortRationale: "Escalation is appropriate when authority or evidence is insufficient, but it does not itself restore the degraded service in this scenario.",
     reviewQuestion: "Is escalation necessary because a safe reversible action cannot be justified?",
     executableForScenario: false
   }
@@ -63,13 +58,7 @@ export function remediationDecisionMode(input: {
   selectedRemediation: string | null;
 }): RemediationDecisionMode {
   if (
-    [
-      "REMEDIATION_SELECTED",
-      "ROLLING_BACK",
-      "READY_FOR_VALIDATION",
-      "VALIDATED",
-      "RESOLVED"
-    ].includes(input.status) &&
+    ["REMEDIATION_SELECTED", "ROLLING_BACK", "READY_FOR_VALIDATION", "VALIDATED", "RESOLVED"].includes(input.status) &&
     input.selectedRemediation === "ROLLBACK_RELEASE"
   ) {
     return "RECORDED";

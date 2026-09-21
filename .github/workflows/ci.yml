@@ -1,7 +1,6 @@
 name: Engineering CI (manual / dependency-backed)
 
 on:
-  push:
   workflow_dispatch:
 
 permissions:

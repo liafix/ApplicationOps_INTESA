@@ -45,7 +45,6 @@ export function assessRootCause(evidence: RootCauseEvidence): RootCauseAssessmen
   return {
     code: "INSUFFICIENT_EVIDENCE",
     confidence: "LOW",
-    explanation:
-      "The available evidence does not establish the deterministic release timeout regression."
+    explanation: "The available evidence does not establish the deterministic release timeout regression."
   };
 }

@@ -4,15 +4,11 @@ import { guidedStepDefinition } from "@/lib/ui/guided-workflow";
 import { useGuidedWorkflow } from "./guided-workflow-provider";
 
 export function GuidedController() {
-  const { runtimeMode, step, busy, hydrating, error, runPrimaryAction, resetDemo, incident } =
-    useGuidedWorkflow();
+  const { runtimeMode, step, busy, hydrating, error, runPrimaryAction, resetDemo, incident } = useGuidedWorkflow();
   const presentation = runtimeMode === "presentation";
   const definition = guidedStepDefinition(step);
   const completed = step === 6;
-  const decisionRecorded =
-    step === 3 &&
-    incident?.status === "REMEDIATION_SELECTED" &&
-    incident.selectedRemediation === "ROLLBACK_RELEASE";
+  const decisionRecorded = step === 3 && incident?.status === "REMEDIATION_SELECTED" && incident.selectedRemediation === "ROLLBACK_RELEASE";
   const rollbackComplete = incident?.status === "READY_FOR_VALIDATION";
   const rollbackExecuting = incident?.status === "ROLLING_BACK";
   const validationComplete = incident?.status === "VALIDATED";
@@ -74,23 +70,15 @@ export function GuidedController() {
             <span className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
               {completed ? "Complete" : `Step ${step} of 5`}
             </span>
-            <span
-              className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${presentation ? "border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200" : "border-sky-400/25 bg-sky-400/[0.06] text-sky-200"}`}
-            >
+            <span className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${presentation ? "border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200" : "border-sky-400/25 bg-sky-400/[0.06] text-sky-200"}`}>
               {presentation ? "Presentation mode" : "DB-backed mode"}
             </span>
-            {incident?.status ? (
-              <span className="font-mono text-[11px] text-slate-400">{incident.status}</span>
-            ) : null}
+            {incident?.status ? <span className="font-mono text-[11px] text-slate-400">{incident.status}</span> : null}
           </div>
           <p className="mt-1 truncate text-sm font-semibold text-white">{title}</p>
           <p className="mt-0.5 hidden max-w-3xl text-xs text-slate-400 sm:block">{description}</p>
           <div className="mt-1 min-h-4" aria-live="polite">
-            {error ? (
-              <p className="text-xs text-rose-300">{error}</p>
-            ) : hydrating ? (
-              <p className="text-xs text-slate-400">Loading database-backed workflow state…</p>
-            ) : null}
+            {error ? <p className="text-xs text-rose-300">{error}</p> : hydrating ? <p className="text-xs text-slate-400">Loading database-backed workflow state…</p> : null}
           </div>
         </div>
 

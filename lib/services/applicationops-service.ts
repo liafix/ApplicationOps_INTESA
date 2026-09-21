@@ -34,11 +34,7 @@ type Db = PrismaClient | Tx;
 
 function assertCanonicalIncidentId(id: string): void {
   if (id !== SCENARIO.incidentId) {
-    throw new ApiError(
-      404,
-      "INCIDENT_NOT_FOUND",
-      "The requested synthetic incident does not exist."
-    );
+    throw new ApiError(404, "INCIDENT_NOT_FOUND", "The requested synthetic incident does not exist.");
   }
 }
 
@@ -79,11 +75,7 @@ async function requireIncident(db: Db, id: string) {
   assertCanonicalIncidentId(id);
   const incident = await db.incident.findUnique({ where: { id } });
   if (!incident) {
-    throw new ApiError(
-      404,
-      "INCIDENT_NOT_FOUND",
-      "The requested synthetic incident does not exist."
-    );
+    throw new ApiError(404, "INCIDENT_NOT_FOUND", "The requested synthetic incident does not exist.");
   }
   return incident;
 }
@@ -103,11 +95,7 @@ async function requireEvidenceContext(db: Db, id: string) {
   });
 
   if (!incident) {
-    throw new ApiError(
-      404,
-      "INCIDENT_NOT_FOUND",
-      "The requested synthetic incident does not exist."
-    );
+    throw new ApiError(404, "INCIDENT_NOT_FOUND", "The requested synthetic incident does not exist.");
   }
 
   const currentRelease = incident.application.releases.find(
@@ -236,10 +224,7 @@ export async function getIncident(id: string) {
 
 export async function getLogs(id: string) {
   await requireIncident(prisma, id);
-  return prisma.diagnosticLog.findMany({
-    where: { incidentId: id },
-    orderBy: { timestamp: "asc" }
-  });
+  return prisma.diagnosticLog.findMany({ where: { incidentId: id }, orderBy: { timestamp: "asc" } });
 }
 
 export async function getRequests(id: string) {
@@ -308,33 +293,27 @@ export async function confirmRegression(id: string) {
     const next = confirmReleaseRegression(context.incident.status as IncidentStatus, assessment);
     const now = new Date();
 
-    await compareAndSetIncidentStatus(tx, id, context.incident.status as IncidentStatus, next, {
-      rootCauseCode: assessment.code,
-      technicalSummary: assessment.explanation
-    });
-    await appendAudit(
+    await compareAndSetIncidentStatus(
       tx,
       id,
-      "RELEASE_COMPARISON_REVIEWED",
+      context.incident.status as IncidentStatus,
+      next,
       {
-        affectedRelease: context.currentRelease.version,
-        previousRelease: context.previousRelease.version,
-        currentTimeoutMs: evidence.currentTimeoutMs,
-        previousTimeoutMs: evidence.previousTimeoutMs,
-        observedDownstreamLatencyMs: evidence.observedDownstreamLatencyMs
-      },
-      now
+        rootCauseCode: assessment.code,
+        technicalSummary: assessment.explanation
+      }
     );
-    await appendAudit(
-      tx,
-      id,
-      "RELEASE_REGRESSION_CONFIRMED",
-      {
-        code: assessment.code,
-        confidence: assessment.confidence
-      },
-      new Date(now.getTime() + 1)
-    );
+    await appendAudit(tx, id, "RELEASE_COMPARISON_REVIEWED", {
+      affectedRelease: context.currentRelease.version,
+      previousRelease: context.previousRelease.version,
+      currentTimeoutMs: evidence.currentTimeoutMs,
+      previousTimeoutMs: evidence.previousTimeoutMs,
+      observedDownstreamLatencyMs: evidence.observedDownstreamLatencyMs
+    }, now);
+    await appendAudit(tx, id, "RELEASE_REGRESSION_CONFIRMED", {
+      code: assessment.code,
+      confidence: assessment.confidence
+    }, new Date(now.getTime() + 1));
 
     return { id, status: next, rootCause: assessment, evidence };
   });
@@ -345,11 +324,7 @@ export async function selectIncidentRemediation(id: string, action: RemediationA
   return prisma.$transaction(async (tx) => {
     const context = await requireEvidenceContext(tx, id);
     const { assessment } = rootCauseFromContext(context);
-    const selected = chooseRemediation(
-      context.incident.status as IncidentStatus,
-      assessment,
-      action
-    );
+    const selected = chooseRemediation(context.incident.status as IncidentStatus, assessment, action);
 
     await compareAndSetIncidentStatus(
       tx,
@@ -412,16 +387,10 @@ export async function rollbackIncident(id: string) {
       }),
       "The affected release no longer matches the expected degraded state."
     );
-    await appendAudit(
-      tx,
-      id,
-      "ROLLBACK_STARTED",
-      {
-        fromRelease: context.currentRelease.version,
-        targetRelease: context.previousRelease.version
-      },
-      baseTime
-    );
+    await appendAudit(tx, id, "ROLLBACK_STARTED", {
+      fromRelease: context.currentRelease.version,
+      targetRelease: context.previousRelease.version
+    }, baseTime);
 
     const finished = finishRollback(started.status, started.releases);
 
@@ -453,17 +422,11 @@ export async function rollbackIncident(id: string) {
     );
 
     const rollbackCompletedAt = new Date(baseTime.getTime() + 2);
-    await appendAudit(
-      tx,
-      id,
-      "ROLLBACK_COMPLETED",
-      {
-        affectedRelease: context.currentRelease.version,
-        restoredRelease: context.previousRelease.version,
-        recoveredErrorRatePct: SCENARIO.recoveredErrorRatePct
-      },
-      rollbackCompletedAt
-    );
+    await appendAudit(tx, id, "ROLLBACK_COMPLETED", {
+      affectedRelease: context.currentRelease.version,
+      restoredRelease: context.previousRelease.version,
+      recoveredErrorRatePct: SCENARIO.recoveredErrorRatePct
+    }, rollbackCompletedAt);
 
     const validationAt = new Date(baseTime.getTime() + 3);
     await tx.apiRequest.create({
@@ -513,9 +476,7 @@ export async function rollbackIncident(id: string) {
   });
 }
 
-function mapPersistedChecks(
-  checks: Array<{ key: string; label: string; required: boolean; status: string }>
-): ValidationCheck[] {
+function mapPersistedChecks(checks: Array<{ key: string; label: string; required: boolean; status: string }>): ValidationCheck[] {
   return checks.map((check) => ({
     id: check.key as ValidationCheckId,
     label: check.label,
@@ -532,11 +493,7 @@ export async function runIncidentValidation(id: string) {
       (event) => event.type === "ROLLBACK_COMPLETED"
     );
     if (!rollbackCompleted) {
-      throw new ApiError(
-        409,
-        "ROLLBACK_NOT_COMPLETED",
-        "Recovery validation requires a completed rollback."
-      );
+      throw new ApiError(409, "ROLLBACK_NOT_COMPLETED", "Recovery validation requires a completed rollback.");
     }
 
     const recoveryEvidence = deriveRecoveryValidationEvidence({
@@ -591,17 +548,11 @@ export async function runIncidentValidation(id: string) {
     const next = validateRecovery(context.incident.status as IncidentStatus, checks);
     const validationStartedAt = new Date();
 
-    await appendAudit(
-      tx,
-      id,
-      "VALIDATION_STARTED",
-      {
-        thresholdPct: SCENARIO.validationErrorRateThresholdPct,
-        recoveryRequestId: SCENARIO.recoveryRequestId,
-        recoveryTransactionId: SCENARIO.recoveryTransactionId
-      },
-      validationStartedAt
-    );
+    await appendAudit(tx, id, "VALIDATION_STARTED", {
+      thresholdPct: SCENARIO.validationErrorRateThresholdPct,
+      recoveryRequestId: SCENARIO.recoveryRequestId,
+      recoveryTransactionId: SCENARIO.recoveryTransactionId
+    }, validationStartedAt);
 
     for (const check of checks) {
       await requireSingleUpdate(
@@ -613,21 +564,20 @@ export async function runIncidentValidation(id: string) {
       );
     }
 
-    await compareAndSetIncidentStatus(tx, id, context.incident.status as IncidentStatus, next);
-    await appendAudit(
+    await compareAndSetIncidentStatus(
       tx,
       id,
-      "VALIDATION_PASSED",
-      {
-        passed: 4,
-        required: 4,
-        stableReleaseRestored: recoveryEvidence.stableReleaseRestored,
-        errorRateBelowThreshold: recoveryEvidence.errorRateBelowThreshold,
-        syntheticTransactionSucceeded: recoveryEvidence.syntheticTransactionSucceeded,
-        noNewTimeoutErrors: recoveryEvidence.noNewTimeoutErrors
-      },
-      new Date(validationStartedAt.getTime() + 1)
+      context.incident.status as IncidentStatus,
+      next
     );
+    await appendAudit(tx, id, "VALIDATION_PASSED", {
+      passed: 4,
+      required: 4,
+      stableReleaseRestored: recoveryEvidence.stableReleaseRestored,
+      errorRateBelowThreshold: recoveryEvidence.errorRateBelowThreshold,
+      syntheticTransactionSucceeded: recoveryEvidence.syntheticTransactionSucceeded,
+      noNewTimeoutErrors: recoveryEvidence.noNewTimeoutErrors
+    }, new Date(validationStartedAt.getTime() + 1));
 
     return { id, status: next, checks, evidence: recoveryEvidence };
   });
@@ -655,50 +605,26 @@ export async function resolveIncident(id: string) {
         }
       },
       releases: {
-        previous: {
-          version: context.previousRelease.version,
-          status: context.previousRelease.status as ReleaseStatus
-        },
-        current: {
-          version: context.currentRelease.version,
-          status: context.currentRelease.status as ReleaseStatus
-        },
+        previous: { version: context.previousRelease.version, status: context.previousRelease.status as ReleaseStatus },
+        current: { version: context.currentRelease.version, status: context.currentRelease.status as ReleaseStatus },
         activeReleaseVersion: context.incident.application.activeReleaseVersion
       },
       requests: context.incident.requests.map((request) => ({
-        requestId: request.requestId,
-        responseStatus: request.responseStatus,
-        releaseVersion: request.releaseVersion,
-        failureCode: request.failureCode,
-        createdAt: request.createdAt
+        requestId: request.requestId, responseStatus: request.responseStatus, releaseVersion: request.releaseVersion,
+        failureCode: request.failureCode, createdAt: request.createdAt
       })),
       transactions: context.incident.transactions.map((transaction) => ({
-        id: transaction.id,
-        requestId: transaction.requestId,
-        status: transaction.status as "FAILED" | "SUCCEEDED",
-        applicationVersion: transaction.applicationVersion,
-        failureCode: transaction.failureCode,
-        createdAt: transaction.createdAt
+        id: transaction.id, requestId: transaction.requestId, status: transaction.status as "FAILED" | "SUCCEEDED",
+        applicationVersion: transaction.applicationVersion, failureCode: transaction.failureCode, createdAt: transaction.createdAt
       })),
       logs: context.incident.logs.map((log) => ({
-        timestamp: log.timestamp,
-        level: log.level as "INFO" | "WARN" | "ERROR",
-        requestId: log.requestId,
-        message: log.message
+        timestamp: log.timestamp, level: log.level as "INFO" | "WARN" | "ERROR", requestId: log.requestId, message: log.message
       })),
-      audit: context.incident.auditEvents.map((event) => ({
-        type: event.type,
-        timestamp: event.timestamp
-      })),
+      audit: context.incident.auditEvents.map((event) => ({ type: event.type, timestamp: event.timestamp })),
       validation: checks
     });
     if (!handoff.ready || !handoff.technicalSummary || !handoff.businessSummary) {
-      throw new ApiError(
-        409,
-        "RESOLUTION_EVIDENCE_INCOMPLETE",
-        "Incident closure requires validated, internally consistent persisted recovery evidence.",
-        handoff.reasons
-      );
+      throw new ApiError(409, "RESOLUTION_EVIDENCE_INCOMPLETE", "Incident closure requires validated, internally consistent persisted recovery evidence.", handoff.reasons);
     }
 
     const next = resolveValidatedIncident(context.incident.status as IncidentStatus, checks);
@@ -707,36 +633,19 @@ export async function resolveIncident(id: string) {
       closureTechnicalSummary: handoff.technicalSummary,
       closureBusinessSummary: handoff.businessSummary
     });
-    await appendAudit(
-      tx,
-      id,
-      "RESOLUTION_HANDOFF_CREATED",
-      {
-        technicalSummaryGenerated: true,
-        businessSummaryGenerated: true,
-        validation: "4/4 PASS"
-      },
-      now
-    );
-    await appendAudit(
-      tx,
-      id,
-      "INCIDENT_RESOLVED",
-      {
-        rootCauseCode: context.incident.rootCauseCode ?? "UNKNOWN",
-        affectedRelease: context.incident.affectedRelease,
-        recoveredRelease: context.incident.recoveredRelease ?? "UNKNOWN",
-        validation: "4/4 PASS"
-      },
-      new Date(now.getTime() + 1)
-    );
+    await appendAudit(tx, id, "RESOLUTION_HANDOFF_CREATED", {
+      technicalSummaryGenerated: true,
+      businessSummaryGenerated: true,
+      validation: "4/4 PASS"
+    }, now);
+    await appendAudit(tx, id, "INCIDENT_RESOLVED", {
+      rootCauseCode: context.incident.rootCauseCode ?? "UNKNOWN",
+      affectedRelease: context.incident.affectedRelease,
+      recoveredRelease: context.incident.recoveredRelease ?? "UNKNOWN",
+      validation: "4/4 PASS"
+    }, new Date(now.getTime() + 1));
 
-    return {
-      id,
-      status: next,
-      technicalSummary: handoff.technicalSummary,
-      businessSummary: handoff.businessSummary
-    };
+    return { id, status: next, technicalSummary: handoff.technicalSummary, businessSummary: handoff.businessSummary };
   });
 }
 

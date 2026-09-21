@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SCENARIO } from "@/lib/data/synthetic-scenario";
-import {
-  deriveRecoveryValidationEvidence,
-  type RecoveryValidationInput
-} from "@/lib/evidence/recovery-validation";
+import { deriveRecoveryValidationEvidence, type RecoveryValidationInput } from "@/lib/evidence/recovery-validation";
 
 function completeInput(): RecoveryValidationInput {
   const rollbackAt = new Date("2026-09-03T09:00:00.000Z");

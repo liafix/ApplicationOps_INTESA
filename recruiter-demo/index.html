@@ -1,216 +1,89 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#071019" />
-    <meta
-      name="description"
-      content="ApplicationOps — independent candidate demo for release and incident support workflows using synthetic data."
-    />
-    <title>ApplicationOps — Release & Incident Support Console</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="ambient ambient-a"></div>
-    <div class="ambient ambient-b"></div>
-    <main class="shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="logo">AO</div>
-          <div><strong>ApplicationOps</strong><span>Release & Incident Support Console</span></div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071019" />
+  <meta name="description" content="ApplicationOps — independent candidate demo for release and incident support workflows using synthetic data." />
+  <title>ApplicationOps — Release & Incident Support Console</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="logo">AO</div><div><strong>ApplicationOps</strong><span>Release & Incident Support Console</span></div></div>
+      <div class="badges"><span class="chip info">Independent candidate demo</span><span class="chip">Synthetic data only</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-main glass">
+        <p class="eyebrow">Application Support Associate · Candidate Demonstrator</p>
+        <h1>A release went wrong. Trace the evidence, choose the safest recovery, and prove the service is healthy.</h1>
+        <p class="lead">A synthetic transaction-processing service becomes degraded immediately after release <b>v2.8.0</b>. This walkthrough keeps the incident, release diff, request evidence, remediation decision, recovery validation and closure handoff in one auditable support flow.</p>
+        <div class="hero-grid">
+          <div><span>What happened?</span><b>Error rate jumped after a new release.</b></div>
+          <div><span>Your goal</span><b>Find the regression and recover safely.</b></div>
+          <div><span>Closure rule</span><b>No incident closure without evidence.</b></div>
         </div>
-        <div class="badges">
-          <span class="chip info">Independent candidate demo</span
-          ><span class="chip">Synthetic data only</span>
+        <div class="hero-actions"><button id="primary-action" class="primary">START INVESTIGATION</button><button id="reset-action" class="secondary">RESET DEMO</button></div>
+      </div>
+
+      <aside class="snapshot glass">
+        <div class="snapshot-head"><div><span>Incident snapshot</span><b>APP-2047</b></div><span class="chip danger">HIGH</span></div>
+        <div class="metric-row"><span>Incident status</span><b id="incident-status" class="chip status warning">OPEN</b></div>
+        <div class="metric-row"><span>Service health</span><b id="service-health" class="warning-text">DEGRADED</b></div>
+        <div class="metric-row"><span>Active release</span><b id="active-release">v2.8.0</b></div>
+        <div class="metric-row"><span>Synthetic error rate</span><b id="error-rate" class="danger-text">14.8%</b></div>
+        <div class="signal"><span>Signal to investigate</span><p>The incident begins shortly after deployment, so release context is the first evidence path to inspect.</p></div>
+      </aside>
+    </section>
+
+    <section class="disclaimer"><b>Scope boundary.</b> Independent candidate demonstrator built only from public role/company context and synthetic data. It is not an Intesa Sanpaolo product, internal system, architecture representation or real banking-processing environment.</section>
+
+    <section class="workflow-card glass">
+      <div class="section-head"><div><p class="eyebrow">Guided workflow</p><h2>Five checkpoints from alert to safe closure</h2></div><div class="progress-copy"><span id="progress-copy">Stage 1 of 5</span><div class="progress"><i id="progress-fill"></i></div></div></div>
+      <div id="steps" class="steps"></div>
+    </section>
+
+    <section class="workspace-grid" data-section="1">
+      <article class="panel glass">
+        <p class="eyebrow">Evidence workspace</p><h2>Correlate the release, request and failure signal.</h2>
+        <div id="stage-detail"></div>
+        <div class="evidence-table">
+          <div><span>Release deployed</span><b>v2.8.0 · 07:30:00</b></div>
+          <div><span>Failed request</span><b>req_tx_8f31 · HTTP 504</b></div>
+          <div><span>Failure code</span><b>UPSTREAM_TIMEOUT</b></div>
+          <div><span>Observed downstream latency</span><b>1437 ms</b></div>
         </div>
-      </header>
+      </article>
+      <aside class="panel glass"><p class="eyebrow">Release comparison</p><h3>v2.7.4 → v2.8.0</h3><div class="compare"><div><span>Downstream timeout</span><b>5000 ms</b><em>→</em><strong>800 ms</strong></div><div><span>Synthetic error rate</span><b>1.2%</b><em>→</em><strong>14.8%</strong></div></div><div class="root"><span>Root cause</span><b id="root-cause">Not confirmed yet</b></div></aside>
+    </section>
 
-      <section class="hero">
-        <div class="hero-main glass">
-          <p class="eyebrow">Application Support Associate · Candidate Demonstrator</p>
-          <h1>
-            A release went wrong. Trace the evidence, choose the safest recovery, and prove the
-            service is healthy.
-          </h1>
-          <p class="lead">
-            A synthetic transaction-processing service becomes degraded immediately after release
-            <b>v2.8.0</b>. This walkthrough keeps the incident, release diff, request evidence,
-            remediation decision, recovery validation and closure handoff in one auditable support
-            flow.
-          </p>
-          <div class="hero-grid">
-            <div><span>What happened?</span><b>Error rate jumped after a new release.</b></div>
-            <div><span>Your goal</span><b>Find the regression and recover safely.</b></div>
-            <div><span>Closure rule</span><b>No incident closure without evidence.</b></div>
-          </div>
-          <div class="hero-actions">
-            <button id="primary-action" class="primary">START INVESTIGATION</button
-            ><button id="reset-action" class="secondary">RESET DEMO</button>
-          </div>
-        </div>
+    <section class="workspace-grid" data-section="3">
+      <article class="panel glass"><p class="eyebrow">Remediation decision</p><h2>Choose the safest evidence-aligned recovery.</h2><div class="option recommended"><div><span class="chip positive">Recommended</span><span class="chip">Reversible</span></div><h3>Roll back release v2.8.0</h3><p>Restore the known stable v2.7.4, then verify the service with explicit recovery evidence.</p></div><div class="option muted-option"><h3>Change production data</h3><p>Rejected for this synthetic scenario: the failure is release-correlated and a data mutation is not supported by the evidence.</p></div><div class="root"><span>Recorded remediation</span><b id="remediation">No decision recorded</b></div></article>
+      <aside class="panel glass"><p class="eyebrow">Rollback state</p><div class="big-metric"><span>Release v2.8.0</span><b id="release-status">DEGRADED</b></div><div id="recovery-evidence" class="recovery-box"><p class="muted">Recovery evidence will appear after the rollback stage.</p></div></aside>
+    </section>
 
-        <aside class="snapshot glass">
-          <div class="snapshot-head">
-            <div><span>Incident snapshot</span><b>APP-2047</b></div>
-            <span class="chip danger">HIGH</span>
-          </div>
-          <div class="metric-row">
-            <span>Incident status</span><b id="incident-status" class="chip status warning">OPEN</b>
-          </div>
-          <div class="metric-row">
-            <span>Service health</span><b id="service-health" class="warning-text">DEGRADED</b>
-          </div>
-          <div class="metric-row"><span>Active release</span><b id="active-release">v2.8.0</b></div>
-          <div class="metric-row">
-            <span>Synthetic error rate</span><b id="error-rate" class="danger-text">14.8%</b>
-          </div>
-          <div class="signal">
-            <span>Signal to investigate</span>
-            <p>
-              The incident begins shortly after deployment, so release context is the first evidence
-              path to inspect.
-            </p>
-          </div>
-        </aside>
-      </section>
+    <section class="workspace-grid" data-section="4">
+      <article class="panel glass"><div class="section-head compact"><div><p class="eyebrow">Recovery validation gate</p><h2>Validation must pass 4 / 4.</h2></div><div id="validation-count" class="score">0 / 4</div></div><div id="validation-list" class="validation-list"></div></article>
+      <aside class="panel glass"><p class="eyebrow">Closure boundary</p><h3>Healthy ≠ resolved.</h3><p class="lead small">A successful recovery only unlocks resolution. The incident remains open until the explicit closure handoff is recorded.</p></aside>
+    </section>
 
-      <section class="disclaimer">
-        <b>Scope boundary.</b> Independent candidate demonstrator built only from public
-        role/company context and synthetic data. It is not an Intesa Sanpaolo product, internal
-        system, architecture representation or real banking-processing environment.
-      </section>
+    <section class="workspace-grid" data-section="5">
+      <article class="panel glass"><p class="eyebrow">Resolution handoff</p><h2>Translate technical recovery into an auditable closure.</h2><div id="handoff" class="handoff"><p class="muted">Closure summaries unlock only after 4/4 validation.</p></div></article>
+      <aside class="panel glass audit-panel"><p class="eyebrow">Audit trail</p><div id="audit-list" class="audit-list"></div></aside>
+    </section>
 
-      <section class="workflow-card glass">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Guided workflow</p>
-            <h2>Five checkpoints from alert to safe closure</h2>
-          </div>
-          <div class="progress-copy">
-            <span id="progress-copy">Stage 1 of 5</span>
-            <div class="progress"><i id="progress-fill"></i></div>
-          </div>
-        </div>
-        <div id="steps" class="steps"></div>
-      </section>
+    <section class="proof-strip">
+      <div><b>Browser-safe recruiter mode</b><span>No database or credentials required</span></div>
+      <div><b>Engineering source preserved</b><span>Next.js + Prisma + unit/integration test source remains in repo</span></div>
+      <div><b>Synthetic scenario</b><span>No customer, bank or production data</span></div>
+    </section>
 
-      <section class="workspace-grid" data-section="1">
-        <article class="panel glass">
-          <p class="eyebrow">Evidence workspace</p>
-          <h2>Correlate the release, request and failure signal.</h2>
-          <div id="stage-detail"></div>
-          <div class="evidence-table">
-            <div><span>Release deployed</span><b>v2.8.0 · 07:30:00</b></div>
-            <div><span>Failed request</span><b>req_tx_8f31 · HTTP 504</b></div>
-            <div><span>Failure code</span><b>UPSTREAM_TIMEOUT</b></div>
-            <div><span>Observed downstream latency</span><b>1437 ms</b></div>
-          </div>
-        </article>
-        <aside class="panel glass">
-          <p class="eyebrow">Release comparison</p>
-          <h3>v2.7.4 → v2.8.0</h3>
-          <div class="compare">
-            <div>
-              <span>Downstream timeout</span><b>5000 ms</b><em>→</em><strong>800 ms</strong>
-            </div>
-            <div><span>Synthetic error rate</span><b>1.2%</b><em>→</em><strong>14.8%</strong></div>
-          </div>
-          <div class="root"><span>Root cause</span><b id="root-cause">Not confirmed yet</b></div>
-        </aside>
-      </section>
-
-      <section class="workspace-grid" data-section="3">
-        <article class="panel glass">
-          <p class="eyebrow">Remediation decision</p>
-          <h2>Choose the safest evidence-aligned recovery.</h2>
-          <div class="option recommended">
-            <div>
-              <span class="chip positive">Recommended</span><span class="chip">Reversible</span>
-            </div>
-            <h3>Roll back release v2.8.0</h3>
-            <p>
-              Restore the known stable v2.7.4, then verify the service with explicit recovery
-              evidence.
-            </p>
-          </div>
-          <div class="option muted-option">
-            <h3>Change production data</h3>
-            <p>
-              Rejected for this synthetic scenario: the failure is release-correlated and a data
-              mutation is not supported by the evidence.
-            </p>
-          </div>
-          <div class="root">
-            <span>Recorded remediation</span><b id="remediation">No decision recorded</b>
-          </div>
-        </article>
-        <aside class="panel glass">
-          <p class="eyebrow">Rollback state</p>
-          <div class="big-metric">
-            <span>Release v2.8.0</span><b id="release-status">DEGRADED</b>
-          </div>
-          <div id="recovery-evidence" class="recovery-box">
-            <p class="muted">Recovery evidence will appear after the rollback stage.</p>
-          </div>
-        </aside>
-      </section>
-
-      <section class="workspace-grid" data-section="4">
-        <article class="panel glass">
-          <div class="section-head compact">
-            <div>
-              <p class="eyebrow">Recovery validation gate</p>
-              <h2>Validation must pass 4 / 4.</h2>
-            </div>
-            <div id="validation-count" class="score">0 / 4</div>
-          </div>
-          <div id="validation-list" class="validation-list"></div>
-        </article>
-        <aside class="panel glass">
-          <p class="eyebrow">Closure boundary</p>
-          <h3>Healthy ≠ resolved.</h3>
-          <p class="lead small">
-            A successful recovery only unlocks resolution. The incident remains open until the
-            explicit closure handoff is recorded.
-          </p>
-        </aside>
-      </section>
-
-      <section class="workspace-grid" data-section="5">
-        <article class="panel glass">
-          <p class="eyebrow">Resolution handoff</p>
-          <h2>Translate technical recovery into an auditable closure.</h2>
-          <div id="handoff" class="handoff">
-            <p class="muted">Closure summaries unlock only after 4/4 validation.</p>
-          </div>
-        </article>
-        <aside class="panel glass audit-panel">
-          <p class="eyebrow">Audit trail</p>
-          <div id="audit-list" class="audit-list"></div>
-        </aside>
-      </section>
-
-      <section class="proof-strip">
-        <div>
-          <b>Browser-safe recruiter mode</b><span>No database or credentials required</span>
-        </div>
-        <div>
-          <b>Engineering source preserved</b
-          ><span>Next.js + Prisma + unit/integration test source remains in repo</span>
-        </div>
-        <div><b>Synthetic scenario</b><span>No customer, bank or production data</span></div>
-      </section>
-
-      <footer>
-        <span>ApplicationOps · Independent candidate demonstrator</span
-        ><span
-          >Designed to explain investigation → recovery → evidence-based closure in under five
-          minutes.</span
-        >
-      </footer>
-    </main>
-    <div id="toast" class="toast"></div>
-    <script type="module" src="./app.js"></script>
-  </body>
+    <footer><span>ApplicationOps · Independent candidate demonstrator</span><span>Designed to explain investigation → recovery → evidence-based closure in under five minutes.</span></footer>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script type="module" src="./app.js"></script>
+</body>
 </html>

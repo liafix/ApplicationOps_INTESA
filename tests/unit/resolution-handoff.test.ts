@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SCENARIO } from "@/lib/data/synthetic-scenario";
 import { createPendingValidationChecks } from "@/lib/domain/validation";
-import {
-  deriveResolutionHandoff,
-  type ResolutionHandoffInput
-} from "@/lib/evidence/resolution-handoff";
+import { deriveResolutionHandoff, type ResolutionHandoffInput } from "@/lib/evidence/resolution-handoff";
 
 function input(status: "VALIDATED" | "RESOLVED" = "VALIDATED"): ResolutionHandoffInput {
   const rollbackAt = "2026-09-03T09:00:00.000Z";
@@ -17,52 +14,14 @@ function input(status: "VALIDATED" | "RESOLVED" = "VALIDATED"): ResolutionHandof
       selectedRemediation: "ROLLBACK_RELEASE",
       affectedRelease: SCENARIO.currentRelease.version,
       technicalSummary: "Confirmed release regression.",
-      application: {
-        serviceHealth: "HEALTHY",
-        activeReleaseVersion: SCENARIO.previousRelease.version,
-        syntheticErrorRate: SCENARIO.recoveredErrorRatePct
-      }
+      application: { serviceHealth: "HEALTHY", activeReleaseVersion: SCENARIO.previousRelease.version, syntheticErrorRate: SCENARIO.recoveredErrorRatePct }
     },
-    releases: {
-      previous: { version: SCENARIO.previousRelease.version, status: "STABLE" },
-      current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" },
-      activeReleaseVersion: SCENARIO.previousRelease.version
-    },
-    requests: [
-      {
-        requestId: SCENARIO.recoveryRequestId,
-        responseStatus: 200,
-        releaseVersion: SCENARIO.previousRelease.version,
-        failureCode: null,
-        createdAt: recoveryAt
-      }
-    ],
-    transactions: [
-      {
-        id: SCENARIO.recoveryTransactionId,
-        requestId: SCENARIO.recoveryRequestId,
-        status: "SUCCEEDED",
-        applicationVersion: SCENARIO.previousRelease.version,
-        failureCode: null,
-        createdAt: recoveryAt
-      }
-    ],
-    logs: [
-      {
-        timestamp: recoveryAt,
-        level: "INFO",
-        requestId: SCENARIO.recoveryRequestId,
-        message: "Recovery succeeded"
-      }
-    ],
-    audit: [
-      { type: "ROLLBACK_COMPLETED", timestamp: rollbackAt },
-      { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.000Z" }
-    ],
-    validation: createPendingValidationChecks().map((check) => ({
-      ...check,
-      status: "PASS" as const
-    }))
+    releases: { previous: { version: SCENARIO.previousRelease.version, status: "STABLE" }, current: { version: SCENARIO.currentRelease.version, status: "ROLLED_BACK" }, activeReleaseVersion: SCENARIO.previousRelease.version },
+    requests: [{ requestId: SCENARIO.recoveryRequestId, responseStatus: 200, releaseVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
+    transactions: [{ id: SCENARIO.recoveryTransactionId, requestId: SCENARIO.recoveryRequestId, status: "SUCCEEDED", applicationVersion: SCENARIO.previousRelease.version, failureCode: null, createdAt: recoveryAt }],
+    logs: [{ timestamp: recoveryAt, level: "INFO", requestId: SCENARIO.recoveryRequestId, message: "Recovery succeeded" }],
+    audit: [{ type: "ROLLBACK_COMPLETED", timestamp: rollbackAt }, { type: "VALIDATION_PASSED", timestamp: "2026-09-03T09:00:02.000Z" }],
+    validation: createPendingValidationChecks().map((check) => ({ ...check, status: "PASS" as const }))
   };
 }
 

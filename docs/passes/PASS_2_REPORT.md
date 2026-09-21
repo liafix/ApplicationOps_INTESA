@@ -11,7 +11,6 @@ The repository now contains a PostgreSQL/Prisma persistence contract and determi
 ### Prisma/PostgreSQL schema
 
 Models:
-
 - `Application`
 - `Release`
 - `Incident`
@@ -22,7 +21,6 @@ Models:
 - `AuditEvent`
 
 Persisted enums:
-
 - `IncidentStatus`
 - `ReleaseStatus`
 - `RemediationAction`
@@ -32,7 +30,6 @@ Persisted enums:
 - `SyntheticTransactionStatus`
 
 Database protections include:
-
 - foreign keys with cascade deletion for the synthetic evidence graph;
 - unique application+release version constraint;
 - unique incident+validation-key constraint;
@@ -41,7 +38,6 @@ Database protections include:
 ### Deterministic synthetic scenario
 
 Initial reset creates:
-
 - one synthetic application;
 - two releases (`v2.7.4` STABLE, `v2.8.0` DEGRADED);
 - one OPEN incident `APP-2047`;
@@ -62,7 +58,6 @@ Only the canonical synthetic application is deleted. Its related incident/releas
 ### Invariant hardening
 
 Before persistence, `assertSyntheticScenarioSeedInvariants()` rejects:
-
 - progressed incident state;
 - preselected remediation/root cause/recovery;
 - release-pair drift;
@@ -85,7 +80,6 @@ The existing hardened domain layer plus new synthetic scenario/invariant layer c
 **PASS** — `PASS2_SYNTHETIC_SCENARIO_SMOKE_PASS`
 
 Verified:
-
 - deterministic fresh seed equality;
 - 2 releases;
 - 5 log rows;

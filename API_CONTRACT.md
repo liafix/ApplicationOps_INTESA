@@ -4,28 +4,28 @@ All endpoints operate only on the canonical synthetic scenario. No endpoint acce
 
 ## Read endpoints
 
-| Method | Path                                   | Purpose                              |
-| ------ | -------------------------------------- | ------------------------------------ |
-| GET    | `/api/dashboard`                       | Synthetic service/incident summary   |
-| GET    | `/api/incidents/APP-2047`              | Incident + application context       |
-| GET    | `/api/incidents/APP-2047/logs`         | Correlated diagnostic logs           |
-| GET    | `/api/incidents/APP-2047/requests`     | Failed/recovery request evidence     |
-| GET    | `/api/incidents/APP-2047/transactions` | Synthetic transaction evidence       |
-| GET    | `/api/incidents/APP-2047/releases`     | Previous/current release comparison  |
-| GET    | `/api/incidents/APP-2047/validation`   | Canonical validation gate            |
-| GET    | `/api/incidents/APP-2047/audit`        | Append-only application audit events |
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/dashboard` | Synthetic service/incident summary |
+| GET | `/api/incidents/APP-2047` | Incident + application context |
+| GET | `/api/incidents/APP-2047/logs` | Correlated diagnostic logs |
+| GET | `/api/incidents/APP-2047/requests` | Failed/recovery request evidence |
+| GET | `/api/incidents/APP-2047/transactions` | Synthetic transaction evidence |
+| GET | `/api/incidents/APP-2047/releases` | Previous/current release comparison |
+| GET | `/api/incidents/APP-2047/validation` | Canonical validation gate |
+| GET | `/api/incidents/APP-2047/audit` | Append-only application audit events |
 
 ## Mutation endpoints
 
-| Method | Path                                         | Guarded domain command / behavior                                               |
-| ------ | -------------------------------------------- | ------------------------------------------------------------------------------- |
-| POST   | `/api/incidents/APP-2047/investigate`        | `startInvestigation()`                                                          |
-| POST   | `/api/incidents/APP-2047/confirm-regression` | Derive persisted evidence → `assessRootCause()` → `confirmReleaseRegression()`  |
-| POST   | `/api/incidents/APP-2047/remediation`        | Zod-validated action → `chooseRemediation()`                                    |
-| POST   | `/api/incidents/APP-2047/rollback`           | `beginRollback()` + `finishRollback()` as one atomic synthetic rollback command |
-| POST   | `/api/incidents/APP-2047/validation/run`     | Derive recovery evidence → `validateRecovery()`                                 |
-| POST   | `/api/incidents/APP-2047/resolve`            | Persisted checks → `resolveValidatedIncident()`                                 |
-| POST   | `/api/demo/reset`                            | Atomic deterministic scenario reset from PASS 2                                 |
+| Method | Path | Guarded domain command / behavior |
+| --- | --- | --- |
+| POST | `/api/incidents/APP-2047/investigate` | `startInvestigation()` |
+| POST | `/api/incidents/APP-2047/confirm-regression` | Derive persisted evidence → `assessRootCause()` → `confirmReleaseRegression()` |
+| POST | `/api/incidents/APP-2047/remediation` | Zod-validated action → `chooseRemediation()` |
+| POST | `/api/incidents/APP-2047/rollback` | `beginRollback()` + `finishRollback()` as one atomic synthetic rollback command |
+| POST | `/api/incidents/APP-2047/validation/run` | Derive recovery evidence → `validateRecovery()` |
+| POST | `/api/incidents/APP-2047/resolve` | Persisted checks → `resolveValidatedIncident()` |
+| POST | `/api/demo/reset` | Atomic deterministic scenario reset from PASS 2 |
 
 Remediation request body:
 

@@ -48,11 +48,7 @@ describe("remediation decision presentation", () => {
 
   it("marks rollback as the only executable option for this evidence set", () => {
     const rollback = remediationOption("ROLLBACK_RELEASE");
-    expect(rollback).toMatchObject({
-      evidenceFit: "STRONG",
-      risk: "MEDIUM",
-      executableForScenario: true
-    });
+    expect(rollback).toMatchObject({ evidenceFit: "STRONG", risk: "MEDIUM", executableForScenario: true });
 
     for (const action of [
       "RETRY_FAILED_TRANSACTIONS",
@@ -65,22 +61,12 @@ describe("remediation decision presentation", () => {
 
   it("records only a supported decision while the decision gate is ready", () => {
     expect(canRecordRemediationDecision({ mode: "READY", action: "ROLLBACK_RELEASE" })).toBe(true);
-    expect(canRecordRemediationDecision({ mode: "READY", action: "CHANGE_PRODUCTION_DATA" })).toBe(
-      false
-    );
-    expect(canRecordRemediationDecision({ mode: "LOCKED", action: "ROLLBACK_RELEASE" })).toBe(
-      false
-    );
+    expect(canRecordRemediationDecision({ mode: "READY", action: "CHANGE_PRODUCTION_DATA" })).toBe(false);
+    expect(canRecordRemediationDecision({ mode: "LOCKED", action: "ROLLBACK_RELEASE" })).toBe(false);
   });
 
   it("keeps the recorded decision visible through rollback and recovery", () => {
-    for (const status of [
-      "REMEDIATION_SELECTED",
-      "ROLLING_BACK",
-      "READY_FOR_VALIDATION",
-      "VALIDATED",
-      "RESOLVED"
-    ] as const) {
+    for (const status of ["REMEDIATION_SELECTED", "ROLLING_BACK", "READY_FOR_VALIDATION", "VALIDATED", "RESOLVED"] as const) {
       expect(
         remediationDecisionMode({
           status,

@@ -1,6 +1,10 @@
 import { DomainError } from "./errors";
 import { transitionIncident } from "./incident-state";
-import { completeRollback, startRollback, type ReleasePairState } from "./release-state";
+import {
+  completeRollback,
+  startRollback,
+  type ReleasePairState
+} from "./release-state";
 import { assertRollbackAllowed, selectRemediation } from "./remediation";
 import type {
   IncidentStatus,
