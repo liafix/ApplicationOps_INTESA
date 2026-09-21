@@ -1,5 +1,21 @@
 # ApplicationOps — Release & Incident Support Console
 
+## Recruiter Summary & Verified Status
+
+- **Live Demo:** [https://applicationops-intesa.vercel.app](https://applicationops-intesa.vercel.app)
+- **Purpose:** Independent Application Support Associate candidate demonstrator (synthetic scenario only).
+- **Current Verified Engineering CI Status (PASS 15 / PASS 16 Final Green):**
+  - **Node.js:** `v22.16.0`
+  - **npm:** `10.9.2`
+  - **Dependency Install (`npm ci`):** PASS
+  - **Unit Tests:** **84/84 PASS** (across 19 test files)
+  - **Real PostgreSQL Integration:** **9/9 PASS**
+  - **Production Build (`next build`):** PASS
+  - **Security Audit (`npm audit --audit-level=high`):** **0 high / 0 critical** vulnerabilities
+  - **Vercel Production Deployment:** **READY / GREEN**
+
+---
+
 **Independent candidate demonstrator for an Application Support Associate application.**
 
 ApplicationOps models a deterministic, synthetic release incident from alert to safe closure:
@@ -80,7 +96,7 @@ The database-backed mode is optional and separate from the recruiter live deploy
 - `tests/integration/` — Prisma/PostgreSQL integration suite source
 - `docs/` — CI/security docs and historical engineering evidence
 - `.github/workflows/recruiter-demo.yml` — default push/PR gate for the public demo
-- `.github/workflows/ci.yml` — optional/manual full engineering CI requiring npm dependencies + lockfile
+- `.github/workflows/ci.yml` — dependency-backed engineering CI running on `push` and `workflow_dispatch`
 
 ## Verification policy
 
